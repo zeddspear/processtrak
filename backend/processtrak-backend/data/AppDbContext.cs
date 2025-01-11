@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using processtrak_backend.Models;
 
@@ -5,20 +6,12 @@ namespace processtrak_backend.Api.data
 {
     public class AppDbContext : DbContext
     {
-        protected readonly IConfiguration Configuration;
-
-        public AppDbContext(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder options)
-        {
-            options.UseNpgsql(Configuration.GetConnectionString("AppDatabaseURI"));
-        }
+        public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Automatically configure UUID generation for GUID primary keys
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
                 var primaryKey = entityType.FindPrimaryKey();
@@ -30,15 +23,34 @@ namespace processtrak_backend.Api.data
                         property.SetDefaultValueSql("uuid_generate_v4()");
                     }
                 }
-
-                // Automatically set CreatedAt, UpdatedAt, and DeletedAt
-                modelBuilder
-                    .Entity(entityType.ClrType)
-                    .Property("createdAt")
-                    .HasDefaultValueSql("now() at time zone 'utc'");
-                modelBuilder.Entity(entityType.ClrType).Property("updatedAt").IsRequired(false);
-                modelBuilder.Entity(entityType.ClrType).Property("deletedAt").IsRequired(false);
             }
+
+            // Automatically set CreatedAt, UpdatedAt, and DeletedAt fields
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                var clrType = entityType.ClrType;
+
+                if (typeof(BaseEntity).IsAssignableFrom(clrType))
+                {
+                    modelBuilder
+                        .Entity(clrType)
+                        .Property<DateTime>("createdAt")
+                        .HasDefaultValueSql("now() at time zone 'utc'")
+                        .ValueGeneratedOnAdd();
+
+                    modelBuilder
+                        .Entity(clrType)
+                        .Property<DateTime?>("updatedAt")
+                        .IsRequired(false)
+                        .ValueGeneratedOnUpdate();
+
+                    modelBuilder.Entity(clrType).Property<DateTime?>("deletedAt").IsRequired(false);
+                }
+            }
+
+            // Apply configurations from all IEntityTypeConfiguration<> in the assembly
+            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
             base.OnModelCreating(modelBuilder);
         }
 
@@ -59,7 +71,8 @@ namespace processtrak_backend.Api.data
             return base.SaveChangesAsync(cancellationToken);
         }
 
-        public required DbSet<User> Users { get; set; }
-        public required DbSet<OtpCode> OtpCodes { get; set; }
+        // Define DbSet properties for your entities
+        public DbSet<User> Users { get; set; } = null!;
+        public DbSet<OtpCode> OtpCodes { get; set; } = null!;
     }
 }

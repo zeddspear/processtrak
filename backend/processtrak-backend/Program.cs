@@ -2,15 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using processtrak_backend.Api.data;
 using processtrak_backend.Services;
 
+// Load environment variables from .env file
+EnvReader.Load(".env");
+
 var builder = WebApplication.CreateBuilder(args);
+
+var DbConnectionString =
+    $"Host={Environment.GetEnvironmentVariable("DB_HOST")}; Database={Environment.GetEnvironmentVariable("DATABASE_NAME")}; Username={Environment.GetEnvironmentVariable("USERNAME")}; Password={Environment.GetEnvironmentVariable("DB_PASSWORD")}";
 
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("AppDatabaseURI"))
-);
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(DbConnectionString));
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<AuthService>();
 

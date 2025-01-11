@@ -12,6 +12,9 @@ project.fragment.lock.json
 *.suo
 *.userprefs
 
+#env
+.env
+
 ## Windows Installer files
 *.cab
 *.msi
