@@ -1,0 +1,41 @@
+## Ignore build results
+bin/
+obj/
+
+## .NET Core files
+project.lock.json
+project.fragment.lock.json
+
+## User-specific files
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+## Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+## Windows Installer packages
+*.exe
+*.dll
+
+## Debug and Release directories
+Debug/
+Release/
+
+## Ignore ASP.NET Scaffolding file
+ScaffoldingReadMe.txt
+
+## JetBrains Rider config
+.idea/
+
+## Visual Studio specific files (local workspace settings)
+.vscode/
+.vs/
+
+## Solution file (Don't ignore the `.sln` file)
+# Example: backend/YourSolution.sln should NOT be ignored
+# If there are any auto-generated files related to the solution, ignore them
