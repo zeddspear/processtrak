@@ -36,6 +36,12 @@ ScaffoldingReadMe.txt
 .vscode/
 .vs/
 
+# Ignore appsettings files with sensitive data
+appsettings.Development.json
+appsettings.Production.json
+appsettings.json
+
+
 ## Solution file (Don't ignore the `.sln` file)
 # Example: backend/YourSolution.sln should NOT be ignored
 # If there are any auto-generated files related to the solution, ignore them
