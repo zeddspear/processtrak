@@ -74,5 +74,6 @@ namespace processtrak_backend.Api.data
         // Define DbSet properties for your entities
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<OtpCode> OtpCodes { get; set; } = null!;
+        public DbSet<UserSession> UserSessions { get; set; } = null!;
     }
 }

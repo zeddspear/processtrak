@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using processtrak_backend.DTO;
 using processtrak_backend.Models;
@@ -8,6 +9,7 @@ namespace processtrak_backend.Controllers
 {
     [Route("api/auth")]
     [ApiController]
+    [AllowAnonymous]
     public class AuthController : ControllerBase
     {
         private readonly AuthService _authService;
@@ -18,6 +20,7 @@ namespace processtrak_backend.Controllers
         }
 
         [HttpPost("register")]
+        [AllowAnonymous]
         public async Task<IActionResult> Register(UserRegistrationDto userDto)
         {
             if (
@@ -55,7 +58,25 @@ namespace processtrak_backend.Controllers
                 return Unauthorized("Invalid credentials.");
             }
 
-            return Ok("Login successful.");
+            var expiryTime = DateTime.UtcNow.AddHours(2); // Set token expiration time
+
+            // Generate JWT token and save session
+            var token = _authService.GenerateJwtToken(user, expiryTime);
+            var sessionSaved = await _authService.SaveSession(user, token, expiryTime);
+
+            if (!sessionSaved)
+            {
+                return BadRequest("Failed to save session.");
+            }
+
+            return Ok(
+                new
+                {
+                    message = "Login successful.",
+                    token,
+                    expiryTime,
+                }
+            );
         }
 
         [HttpPost("forgot-password")]
@@ -90,6 +111,18 @@ namespace processtrak_backend.Controllers
             }
 
             return Ok("Password reset successfully.");
+        }
+
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromHeader] string token)
+        {
+            var result = await _authService.DeleteSession(token);
+            if (!result)
+            {
+                return BadRequest("Invalid or expired session.");
+            }
+
+            return Ok("Logged out successfully.");
         }
     }
 }
