@@ -73,6 +73,8 @@ builder.Services.AddHttpClient();
 
 //Adding services as scope
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IAlgorithmService, AlgorithmService>();
+builder.Services.AddScoped<ISchedulingService, SchedulingService>();
 builder.Services.AddScoped<IProcessService, ProcessService>();
 builder.Services.AddHttpContextAccessor();
 

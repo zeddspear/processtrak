@@ -8,6 +8,10 @@ namespace processtrak_backend.Dto
         [StringLength(50, ErrorMessage = "Process ID cannot exceed 50 characters.")]
         public string ProcessId { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Name is required.")]
+        [StringLength(100, ErrorMessage = "Name cannot exceed 100 characters.")]
+        public string name { get; set; } = string.Empty;
+
         [Required(ErrorMessage = "Arrival Time is required.")]
         [Range(0, int.MaxValue, ErrorMessage = "Arrival Time must be a non-negative value.")]
         public int ArrivalTime { get; set; }

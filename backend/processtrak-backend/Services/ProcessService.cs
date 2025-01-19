@@ -36,6 +36,7 @@ namespace processtrak_backend.Services
             {
                 userId = userId,
                 processId = dto.ProcessId,
+                name = dto.name,
                 arrivalTime = dto.ArrivalTime,
                 burstTime = dto.BurstTime,
                 priority = dto.Priority,

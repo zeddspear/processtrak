@@ -75,7 +75,8 @@ namespace processtrak_backend.Api.data
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<OtpCode> OtpCodes { get; set; } = null!;
         public DbSet<UserSession> UserSessions { get; set; } = null!;
-
         public DbSet<Process> Processes { get; set; } = null!;
+        public DbSet<Schedule> Schedules { get; set; } = null!;
+        public DbSet<Algorithm> Algorithms { get; set; } = null!;
     }
 }

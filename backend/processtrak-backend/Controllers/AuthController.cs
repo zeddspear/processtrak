@@ -22,13 +22,9 @@ namespace processtrak_backend.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] UserRegistrationDto userDto)
         {
-            if (
-                !ValidationHelper.IsValidEmail(userDto.email)
-                || !ValidationHelper.IsValidPhone(userDto.phone)
-                || !ValidationHelper.IsValidPassword(userDto.password)
-            )
+            if (!ModelState.IsValid)
             {
-                return BadRequest("Invalid input.");
+                return BadRequest(ModelState);
             }
 
             var user = new User
