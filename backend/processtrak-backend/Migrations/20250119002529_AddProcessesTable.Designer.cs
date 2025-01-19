@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using processtrak_backend.Api.data;
@@ -11,9 +12,11 @@ using processtrak_backend.Api.data;
 namespace processtrak_backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250119002529_AddProcessesTable")]
+    partial class AddProcessesTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -64,11 +67,21 @@ namespace processtrak_backend.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("uuid_generate_v4()");
 
-                    b.Property<int>("arrivalTime")
+                    b.Property<int>("ArrivalTime")
                         .HasColumnType("integer");
 
-                    b.Property<int>("burstTime")
+                    b.Property<int>("BurstTime")
                         .HasColumnType("integer");
+
+                    b.Property<int?>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProcessId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("createdAt")
                         .ValueGeneratedOnAdd()
@@ -78,23 +91,13 @@ namespace processtrak_backend.Migrations
                     b.Property<DateTime?>("deletedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("priority")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("processId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<DateTime?>("updatedAt")
                         .ValueGeneratedOnUpdate()
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("userId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("id");
 
-                    b.HasIndex("userId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("Processes");
                 });
@@ -146,6 +149,16 @@ namespace processtrak_backend.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("uuid_generate_v4()");
 
+                    b.Property<DateTime>("ExpiryTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("createdAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -154,47 +167,37 @@ namespace processtrak_backend.Migrations
                     b.Property<DateTime?>("deletedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("expiryTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("token")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<DateTime?>("updatedAt")
                         .ValueGeneratedOnUpdate()
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("userId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("id");
 
-                    b.HasIndex("userId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("UserSessions");
                 });
 
             modelBuilder.Entity("processtrak_backend.Models.Process", b =>
                 {
-                    b.HasOne("processtrak_backend.Models.User", "user")
+                    b.HasOne("processtrak_backend.Models.User", "User")
                         .WithMany("Processes")
-                        .HasForeignKey("userId")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("user");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("processtrak_backend.Models.UserSession", b =>
                 {
-                    b.HasOne("processtrak_backend.Models.User", "user")
+                    b.HasOne("processtrak_backend.Models.User", "User")
                         .WithMany("UserSessions")
-                        .HasForeignKey("userId")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("user");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("processtrak_backend.Models.User", b =>

@@ -55,10 +55,10 @@ namespace processtrak_backend.Services
         {
             var session = new UserSession
             {
-                UserId = user.id,
-                Token = token,
-                ExpiryTime = expiryTime,
-                User = user,
+                userId = user.id,
+                token = token,
+                expiryTime = expiryTime,
+                user = user,
             };
 
             user.UserSessions!.Add(session); // Add to the user's session collection
@@ -70,9 +70,9 @@ namespace processtrak_backend.Services
         public async Task<bool> DeleteSession(string token)
         {
             var session = await _context
-                .UserSessions.Include(s => s.User)
-                .SingleOrDefaultAsync(s => s.Token == token);
-            if (session == null || session.ExpiryTime < DateTime.UtcNow)
+                .UserSessions.Include(s => s.user)
+                .SingleOrDefaultAsync(s => s.token == token);
+            if (session == null || session.expiryTime < DateTime.UtcNow)
             {
                 return false; // Invalid or expired session
             }
@@ -104,6 +104,12 @@ namespace processtrak_backend.Services
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+        }
+
+        public async Task<bool> IsTokenValid(string token)
+        {
+            var session = await _context.UserSessions.SingleOrDefaultAsync(s => s.token == token);
+            return session != null && session.expiryTime >= DateTime.UtcNow;
         }
 
         public async Task<string> GenerateOtp(string email)

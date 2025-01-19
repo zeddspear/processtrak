@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using processtrak_backend.Api.data;
+using processtrak_backend.interfaces;
 using processtrak_backend.Services;
 using processtrak_backend.Utils;
 
@@ -63,11 +64,17 @@ builder.Services.AddSwaggerGen(options =>
             },
         }
     );
+    // Register the AllowAnonymousOperationFilter
+    options.OperationFilter<AllowAnonymousOperationFilter>();
 });
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(DbConnectionString));
 builder.Services.AddHttpClient();
+
+//Adding services as scope
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IProcessService, ProcessService>();
+builder.Services.AddHttpContextAccessor();
 
 builder
     .Services.AddAuthentication(options =>
@@ -88,24 +95,36 @@ builder
         };
     });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        "AllowAll",
+        builder =>
+        {
+            builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+        }
+    );
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
-}
-else
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
     app.UseDeveloperExceptionPage();
 }
+else
+{
+    app.UseHsts();
+}
 
-app.UseMiddleware<JwtMiddleware>();
 app.UseRouting();
+app.UseCors("AllowAll");
+app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<JwtMiddleware>();
 
 app.MapControllers();
 

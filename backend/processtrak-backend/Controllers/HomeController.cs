@@ -1,5 +1,4 @@
-using System.Net.Http;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace processtrak_backend.Controllers
@@ -18,25 +17,10 @@ namespace processtrak_backend.Controllers
         }
 
         [HttpGet("helloworld")]
+        [AllowAnonymous]
         public IActionResult HelloWorld()
         {
             return Ok("Hello World");
-        }
-
-        [HttpGet("joke")]
-        public async Task<IActionResult> GetJoke()
-        {
-            // Replace with the actual API endpoint for jokes
-            var jokeApiUrl = "https://official-joke-api.appspot.com/random_joke";
-            var response = await _httpClient.GetAsync(jokeApiUrl);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var joke = await response.Content.ReadAsStringAsync();
-                return Ok(joke);
-            }
-
-            return StatusCode((int)response.StatusCode, "Failed to fetch joke");
         }
     }
 }

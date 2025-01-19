@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using processtrak_backend.DTO;
+using processtrak_backend.Dto;
 using processtrak_backend.Models;
 using processtrak_backend.Services;
 using processtrak_backend.Utils;
@@ -20,8 +20,7 @@ namespace processtrak_backend.Controllers
         }
 
         [HttpPost("register")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Register(UserRegistrationDto userDto)
+        public async Task<IActionResult> Register([FromBody] UserRegistrationDto userDto)
         {
             if (
                 !ValidationHelper.IsValidEmail(userDto.email)
@@ -50,9 +49,9 @@ namespace processtrak_backend.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(string email, string password)
+        public async Task<IActionResult> Login([FromBody] UserLoginDto userLogin)
         {
-            var user = await _authService.AuthenticateUser(email, password);
+            var user = await _authService.AuthenticateUser(userLogin.email, userLogin.password);
             if (user == null)
             {
                 return Unauthorized("Invalid credentials.");
@@ -80,7 +79,7 @@ namespace processtrak_backend.Controllers
         }
 
         [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword(string email)
+        public async Task<IActionResult> ForgotPassword([FromBody] string email)
         {
             var otpCode = await _authService.GenerateOtp(email);
             if (otpCode == null)
@@ -93,7 +92,7 @@ namespace processtrak_backend.Controllers
 
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword(
-            string email,
+            [FromBody] string email,
             string code,
             string newPassword
         )
