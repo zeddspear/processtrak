@@ -16,6 +16,7 @@ namespace processtrak_backend.Models
         public int? responseTime { get; set; } // Time when the process first starts execution
         public int? turnaroundTime { get; set; }
         public int? waitingTime { get; set; }
+        public bool? isCompleted { get; set; } = false;
 
         public ProcessState State { get; set; } = ProcessState.Ready;
 

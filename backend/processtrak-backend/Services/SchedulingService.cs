@@ -74,6 +74,10 @@ namespace processtrak_backend.Services
                     break;
                 case "sjf":
                     // Shortest Job First logic
+                    ExecuteSJF(processes);
+                    break;
+                case "srtf":
+                    // Shortest remaining time first
                     break;
                 case "priority":
                     // Priority scheduling logic
@@ -113,6 +117,47 @@ namespace processtrak_backend.Services
 
                 // Update current time
                 currentTime = process.completionTime ?? 0;
+            }
+        }
+
+        private void ExecuteSJF(List<Process> processes)
+        {
+            int n = processes.Count;
+            int completed = 0;
+            int currentTime = 0;
+
+            // Sort by arrival time to handle processes in the order they can arrive
+            processes = processes.OrderBy(p => p.arrivalTime).ToList();
+
+            while (completed < n)
+            {
+                // Get all processes that have arrived but are not yet completed
+                var availableProcesses = processes
+                    .Where(p => p.arrivalTime <= currentTime && !p.isCompleted.GetValueOrDefault())
+                    .OrderBy(p => p.burstTime) // SJF => pick the shortest burst
+                    .ToList();
+
+                if (availableProcesses.Count == 0)
+                {
+                    // If no process has arrived yet, simply move time forward
+                    currentTime++;
+                }
+                else
+                {
+                    // Pick process with the smallest burst time
+                    var shortestJob = availableProcesses.First();
+
+                    // Schedule that process
+                    shortestJob.completionTime = currentTime + shortestJob.burstTime;
+                    shortestJob.turnaroundTime =
+                        shortestJob.completionTime - shortestJob.arrivalTime;
+                    shortestJob.waitingTime = shortestJob.turnaroundTime - shortestJob.burstTime;
+                    shortestJob.isCompleted = true;
+
+                    // Update current time
+                    currentTime = shortestJob.completionTime.GetValueOrDefault();
+                    completed++;
+                }
             }
         }
     }
