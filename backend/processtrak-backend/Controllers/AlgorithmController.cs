@@ -1,6 +1,7 @@
-using System.Reflection.Metadata.Ecma335;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using processtrak_backend.Api.data;
 using processtrak_backend.Dto;
 using processtrak_backend.interfaces;
 
@@ -13,9 +14,12 @@ namespace processtrak_backend.Controllers
     {
         private readonly IAlgorithmService _algorithmService;
 
-        public AlgorithmsController(IAlgorithmService algorithmService)
+        private readonly AppDbContext _context;
+
+        public AlgorithmsController(IAlgorithmService algorithmService, AppDbContext context)
         {
             _algorithmService = algorithmService;
+            _context = context;
         }
 
         [HttpPost]
@@ -43,8 +47,32 @@ namespace processtrak_backend.Controllers
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetAlgorithmById(Guid id)
         {
-            // Implementation for fetching algorithm by ID can go here.
-            return Ok(); // Placeholder
+            var algo = await _context
+                .Algorithms.Where((algo) => algo.id == id)
+                .Select((algo) => new { algo.name, algo.description })
+                .FirstOrDefaultAsync();
+
+            if (algo == null)
+            {
+                return NotFound("Algorithm not found.");
+            }
+
+            return Ok(new { algo });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllAlgorithms()
+        {
+            var algorithms = await _context
+                .Algorithms.Select(algo => new
+                {
+                    algo.id,
+                    algo.name,
+                    algo.description,
+                })
+                .ToListAsync();
+
+            return Ok(algorithms);
         }
     }
 }

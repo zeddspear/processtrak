@@ -100,7 +100,8 @@ public class ProcessesController : ControllerBase
         var result = await _schedulingService.RunScheduleAsync(
             userId,
             dto.ProcessIds,
-            dto.AlgorithmIds
+            dto.AlgorithmIds,
+            dto.TimeQuantum.GetValueOrDefault()
         );
 
         return Ok(result);

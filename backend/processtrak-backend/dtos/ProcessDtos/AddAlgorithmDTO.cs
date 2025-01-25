@@ -7,7 +7,7 @@ namespace processtrak_backend.Dto
         [Required(ErrorMessage = "Algorithm name is required.")]
         [EnumDataType(
             typeof(AlgorithmName),
-            ErrorMessage = "Invalid algorithm name. Valid values are: fcfs, sjf, round_robin, priority."
+            ErrorMessage = "Invalid algorithm name. Valid values are: fcfs, sjf, srtf, round_robin, priority_non_preemptive, priority_preemptive."
         )]
         public string Name { get; set; } = string.Empty;
 
@@ -19,7 +19,9 @@ namespace processtrak_backend.Dto
     {
         FCFS, // First-Come, First-Served
         SJF, // Shortest Job First
+        SRTF,
         RoundRobin,
-        Priority,
+        PriorityNonPreemptive,
+        PriorityPreemptive,
     }
 }

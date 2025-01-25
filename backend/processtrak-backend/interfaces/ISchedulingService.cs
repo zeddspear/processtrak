@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using processtrak_backend.Models;
 
 namespace processtrak_backend.interfaces
@@ -11,7 +7,8 @@ namespace processtrak_backend.interfaces
         Task<Schedule> RunScheduleAsync(
             Guid userId,
             List<Guid> processIds,
-            List<Guid> algorithmIds
+            List<Guid> algorithmIds,
+            int timeQuantum
         );
 
         Task<Schedule?> GetScheduleById(Guid id, Guid userId);

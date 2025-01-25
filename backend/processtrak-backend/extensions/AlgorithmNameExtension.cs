@@ -10,8 +10,10 @@ namespace processtrak_backend.Extensions
             {
                 AlgorithmName.FCFS => "fcfs",
                 AlgorithmName.SJF => "sjf",
+                AlgorithmName.SRTF => "srtf",
                 AlgorithmName.RoundRobin => "round_robin",
-                AlgorithmName.Priority => "priority",
+                AlgorithmName.PriorityNonPreemptive => "priority_non_preemptive",
+                AlgorithmName.PriorityPreemptive => "priority_preemptive",
                 _ => throw new ArgumentOutOfRangeException(
                     nameof(algorithmName),
                     algorithmName,

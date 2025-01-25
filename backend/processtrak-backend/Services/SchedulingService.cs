@@ -17,7 +17,8 @@ namespace processtrak_backend.Services
         public async Task<Schedule> RunScheduleAsync(
             Guid userId,
             List<Guid> processIds,
-            List<Guid> algorithmIds
+            List<Guid> algorithmIds,
+            int timeQuantum
         )
         {
             var processes = await _context
@@ -40,7 +41,7 @@ namespace processtrak_backend.Services
             foreach (var algorithm in algorithms)
             {
                 // Execute algorithm logic on processes
-                ExecuteAlgorithm(processes, algorithm.name);
+                ExecuteAlgorithm(processes, algorithm.name, timeQuantum);
             }
 
             // Calculate stats
@@ -63,101 +64,39 @@ namespace processtrak_backend.Services
                 .FirstOrDefaultAsync(sr => sr.id == id && sr.userId == userId);
         }
 
-        private void ExecuteAlgorithm(List<Process> processes, string algorithmName)
+        private void ExecuteAlgorithm(
+            List<Process> processes,
+            string algorithmName,
+            int timeQuantum
+        )
         {
             // Add scheduling logic for each algorithm
             switch (algorithmName.ToLower())
             {
                 case "fcfs":
                     // First-Come, First-Served logic
-                    ExecuteFCFS(processes);
+                    StaticAlgorithmService.ExecuteFCFS(processes);
                     break;
                 case "sjf":
                     // Shortest Job First logic
-                    ExecuteSJF(processes);
+                    StaticAlgorithmService.ExecuteSJF(processes);
                     break;
                 case "srtf":
                     // Shortest remaining time first
+                    StaticAlgorithmService.ExecuteSRTF(processes);
                     break;
-                case "priority":
-                    // Priority scheduling logic
+                case "priority_non_preemptive":
+                    // Priority (non-pre-emptive) scheduling logic
+                    StaticAlgorithmService.RunPrioritySchedulingNonPreemptive(processes);
+                    break;
+                case "priority_preemptive":
+                    // Priority (non-pre-emptive) scheduling logic
+                    StaticAlgorithmService.RunPrioritySchedulingPreemptive(processes);
                     break;
                 case "rr":
                     // Round Robin logic
+                    StaticAlgorithmService.RunRoundRobin(processes, timeQuantum);
                     break;
-            }
-        }
-
-        private void ExecuteFCFS(List<Process> processes)
-        {
-            // Sort processes by Arrival Time
-            processes.Sort(
-                (p1, p2) =>
-                    p1.arrivalTime.GetValueOrDefault().CompareTo(p2.arrivalTime.GetValueOrDefault())
-            );
-
-            int currentTime = 0;
-
-            foreach (var process in processes)
-            {
-                // Wait for the process to arrive
-                if (currentTime < process.arrivalTime)
-                {
-                    currentTime = process.arrivalTime ?? 0;
-                }
-
-                // Calculate completion time
-                process.completionTime = currentTime + process.burstTime;
-
-                // Calculate turnaround time
-                process.turnaroundTime = process.completionTime - process.arrivalTime;
-
-                // Calculate waiting time
-                process.waitingTime = process.turnaroundTime - process.burstTime;
-
-                // Update current time
-                currentTime = process.completionTime ?? 0;
-            }
-        }
-
-        private void ExecuteSJF(List<Process> processes)
-        {
-            int n = processes.Count;
-            int completed = 0;
-            int currentTime = 0;
-
-            // Sort by arrival time to handle processes in the order they can arrive
-            processes = processes.OrderBy(p => p.arrivalTime).ToList();
-
-            while (completed < n)
-            {
-                // Get all processes that have arrived but are not yet completed
-                var availableProcesses = processes
-                    .Where(p => p.arrivalTime <= currentTime && !p.isCompleted.GetValueOrDefault())
-                    .OrderBy(p => p.burstTime) // SJF => pick the shortest burst
-                    .ToList();
-
-                if (availableProcesses.Count == 0)
-                {
-                    // If no process has arrived yet, simply move time forward
-                    currentTime++;
-                }
-                else
-                {
-                    // Pick process with the smallest burst time
-                    var shortestJob = availableProcesses.First();
-
-                    // Schedule that process
-                    shortestJob.completionTime = currentTime + shortestJob.burstTime;
-                    shortestJob.turnaroundTime =
-                        shortestJob.completionTime - shortestJob.arrivalTime;
-                    shortestJob.waitingTime = shortestJob.turnaroundTime - shortestJob.burstTime;
-                    shortestJob.isCompleted = true;
-
-                    // Update current time
-                    currentTime = shortestJob.completionTime.GetValueOrDefault();
-                    completed++;
-                }
             }
         }
     }
