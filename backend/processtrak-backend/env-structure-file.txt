@@ -1,0 +1,8 @@
+#DB credentials
+DB_HOST = localhost
+DATABASE_NAME = processtrak
+USERNAME = postgres
+DB_PASSWORD = your_db_password
+JWT_SECRET = dd387e100a25d338444cf808aab645a831318ee74e426948d1edea0a4776665d
+MAILER_SEND_API = your_mailer_send_api
+MAILER_SEND_DOMAIN = your_mailer_send_domain
