@@ -27,6 +27,8 @@ namespace processtrak_backend.Services
             {
                 name = algorithmName.ToFriendlyString(),
                 description = dto.Description,
+                displayName = dto.DisplayName,
+                requiresTimeQuantum = dto.RequiresTimeQuantum,
             };
 
             await _context.Algorithms.AddAsync(algorithm);

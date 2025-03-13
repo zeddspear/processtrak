@@ -7,6 +7,8 @@ import Login from "../pages/Login";
 import Register from "../pages/Register";
 import ForgotPassword from "../pages/ForgotPassword";
 import ResetPassword from "../pages/ResetPassword";
+import Processes from "../pages/Processes";
+import Scheduling from "../pages/Scheduling";
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +38,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <About />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "processes",
+        element: (
+          <ProtectedRoute>
+            <Processes />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "scheduling",
+        element: (
+          <ProtectedRoute>
+            <Scheduling />
           </ProtectedRoute>
         ),
       },

@@ -93,7 +93,7 @@ public class ProcessesController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("/schedule/run")]
+    [HttpPost("schedule/run")]
     public async Task<IActionResult> RunSchedule([FromBody] RunScheduleDTO dto)
     {
         var userId = GetUserId();

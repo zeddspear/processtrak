@@ -64,11 +64,14 @@ namespace processtrak_backend.Controllers
         public async Task<IActionResult> GetAllAlgorithms()
         {
             var algorithms = await _context
-                .Algorithms.Select(algo => new
+                .Algorithms.Where(algo => algo.deletedAt == null) // Filter out deleted algorithms
+                .Select(algo => new
                 {
                     algo.id,
                     algo.name,
                     algo.description,
+                    algo.displayName,
+                    algo.requiresTimeQuantum,
                 })
                 .ToListAsync();
 

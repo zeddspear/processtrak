@@ -13,6 +13,10 @@ namespace processtrak_backend.Dto
 
         [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters.")]
         public string? Description { get; set; }
+
+        public string? DisplayName { get; set; }
+
+        public bool? RequiresTimeQuantum { get; set; } = null;
     }
 
     public enum AlgorithmName

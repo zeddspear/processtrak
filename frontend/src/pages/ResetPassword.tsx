@@ -66,7 +66,7 @@ const ResetPassword = () => {
           enableReinitialize // Reinitialize form when storedEmail updates
           onSubmit={(values) => mutation.mutate(values)}
         >
-          {({ isSubmitting }) => (
+          {({}) => (
             <Form className="space-y-4 mt-6">
               {/* Auto-filled and disabled email field */}
               <Field

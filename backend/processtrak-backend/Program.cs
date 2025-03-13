@@ -129,6 +129,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<JwtMiddleware>();
 
+// Call the database initializer
+await DatabaseInitializer.InitializeAsync(app.Services); // Initialize the database
+
 app.MapControllers();
 
 app.Run();
