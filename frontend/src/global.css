@@ -1,4 +1,37 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 body {
+  @apply bg-amber-50 text-gray-900 transition-colors duration-300;
+}
+
+.dark body {
+  @apply bg-gray-900 text-gray-200;
+}
+
+/* Input fields */
+.input-field {
+  @apply w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none;
+}
+
+.input-field {
+  @apply bg-gray-200 border-gray-300 text-gray-900; /* Light mode */
+}
+
+.dark .input-field {
+  @apply bg-gray-800 border-gray-700 text-white; /* Dark mode */
+}
+
+/* Buttons */
+.btn-primary {
+  @apply w-full py-3 rounded-md transition disabled:opacity-50;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700; /* Light mode */
+}
+
+.dark .btn-primary {
+  @apply bg-blue-500 text-white hover:bg-blue-600; /* Dark mode */
 }

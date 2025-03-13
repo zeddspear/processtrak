@@ -76,6 +76,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IAlgorithmService, AlgorithmService>();
 builder.Services.AddScoped<ISchedulingService, SchedulingService>();
 builder.Services.AddScoped<IProcessService, ProcessService>();
+builder.Services.AddScoped<EmailService>();
 builder.Services.AddHttpContextAccessor();
 
 builder

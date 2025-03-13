@@ -75,31 +75,27 @@ namespace processtrak_backend.Controllers
         }
 
         [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword([FromBody] string email)
+        public async Task<IActionResult> ForgotPassword([FromBody] UserForgotPasswordDto body)
         {
-            var otpCode = await _authService.GenerateOtp(email);
+            var otpCode = await _authService.GenerateOtp(body.email);
             if (otpCode == null)
             {
                 return BadRequest("Failed to generate OTP.");
             }
 
-            return Ok("OTP sent to email.");
+            return Ok(new { message = "Otp sent to your provided email", body.email });
         }
 
         [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword(
-            [FromBody] string email,
-            string code,
-            string newPassword
-        )
+        public async Task<IActionResult> ResetPassword([FromBody] UserResetPasswordDto body)
         {
-            var isValidOtp = await _authService.ValidateOtp(email, code);
+            var isValidOtp = await _authService.ValidateOtp(body.email, body.code);
             if (!isValidOtp)
             {
                 return BadRequest("Invalid or expired OTP.");
             }
 
-            var isSuccess = await _authService.ResetPassword(email, newPassword);
+            var isSuccess = await _authService.ResetPassword(body.email, body.newPassword);
             if (!isSuccess)
             {
                 return BadRequest("Failed to reset password.");

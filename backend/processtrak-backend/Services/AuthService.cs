@@ -12,17 +12,17 @@ namespace processtrak_backend.Services
     public class AuthService
     {
         private readonly AppDbContext _context;
-        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly EmailService _emailService;
         private readonly IConfiguration _configuration;
 
         public AuthService(
             AppDbContext context,
-            IHttpClientFactory httpClientFactory,
+            EmailService emailService,
             IConfiguration configuration
         )
         {
             _context = context;
-            _httpClientFactory = httpClientFactory;
+            _emailService = emailService;
             _configuration = configuration;
         }
 
@@ -114,6 +114,14 @@ namespace processtrak_backend.Services
 
         public async Task<string> GenerateOtp(string email)
         {
+            // Remove all previous OTPs for the user
+            var existingOtps = _context.OtpCodes.Where(otp => otp.email == email);
+            _context.OtpCodes.RemoveRange(existingOtps);
+
+            // Save changes to ensure old OTPs are deleted
+            await _context.SaveChangesAsync();
+
+            // Generate a new OTP
             var otpCode = new OtpCode
             {
                 email = email,
@@ -125,7 +133,9 @@ namespace processtrak_backend.Services
             await _context.SaveChangesAsync();
 
             // Send OTP to email
-            // (Assuming you have an email service)
+            var subject = "Your OTP Code";
+            var body = $"Your OTP Code is: <b>{otpCode.code}</b>. It will expire in 10 minutes.";
+            await _emailService.SendEmailAsync(email, subject, body);
 
             return otpCode.code;
         }
@@ -151,6 +161,11 @@ namespace processtrak_backend.Services
             user.password = BCrypt.Net.BCrypt.HashPassword(newPassword);
 
             _context.Users.Update(user);
+
+            // Remove all previous OTPs for the user
+            var existingOtps = _context.OtpCodes.Where(otp => otp.email == email);
+            _context.OtpCodes.RemoveRange(existingOtps);
+
             await _context.SaveChangesAsync();
             return true;
         }
