@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using processtrak_backend.Api.data;
@@ -11,9 +12,11 @@ using processtrak_backend.Api.data;
 namespace processtrak_backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250426212824_MakingJSONColumnsInSchedules")]
+    partial class MakingJSONColumnsInSchedules
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,21 +24,6 @@ namespace processtrak_backend.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("AlgorithmSchedule", b =>
-                {
-                    b.Property<Guid>("algorithmsid")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("scheduleRunsid")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("algorithmsid", "scheduleRunsid");
-
-                    b.HasIndex("scheduleRunsid");
-
-                    b.ToTable("AlgorithmSchedule");
-                });
 
             modelBuilder.Entity("processtrak_backend.Models.Algorithm", b =>
                 {
@@ -116,9 +104,6 @@ namespace processtrak_backend.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("uuid_generate_v4()");
 
-                    b.Property<Guid?>("Scheduleid")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
@@ -176,8 +161,6 @@ namespace processtrak_backend.Migrations
 
                     b.HasKey("id");
 
-                    b.HasIndex("Scheduleid");
-
                     b.HasIndex("userId");
 
                     b.ToTable("Processes");
@@ -189,6 +172,9 @@ namespace processtrak_backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("uuid_generate_v4()");
+
+                    b.Property<Guid?>("Algorithmid")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("AlgorithmsJson")
                         .IsRequired()
@@ -229,6 +215,8 @@ namespace processtrak_backend.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("id");
+
+                    b.HasIndex("Algorithmid");
 
                     b.ToTable("Schedules");
                 });
@@ -309,27 +297,8 @@ namespace processtrak_backend.Migrations
                     b.ToTable("UserSessions");
                 });
 
-            modelBuilder.Entity("AlgorithmSchedule", b =>
-                {
-                    b.HasOne("processtrak_backend.Models.Algorithm", null)
-                        .WithMany()
-                        .HasForeignKey("algorithmsid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("processtrak_backend.Models.Schedule", null)
-                        .WithMany()
-                        .HasForeignKey("scheduleRunsid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("processtrak_backend.Models.Process", b =>
                 {
-                    b.HasOne("processtrak_backend.Models.Schedule", null)
-                        .WithMany("processes")
-                        .HasForeignKey("Scheduleid");
-
                     b.HasOne("processtrak_backend.Models.User", "user")
                         .WithMany("Processes")
                         .HasForeignKey("userId")
@@ -337,6 +306,13 @@ namespace processtrak_backend.Migrations
                         .IsRequired();
 
                     b.Navigation("user");
+                });
+
+            modelBuilder.Entity("processtrak_backend.Models.Schedule", b =>
+                {
+                    b.HasOne("processtrak_backend.Models.Algorithm", null)
+                        .WithMany("scheduleRuns")
+                        .HasForeignKey("Algorithmid");
                 });
 
             modelBuilder.Entity("processtrak_backend.Models.UserSession", b =>
@@ -350,9 +326,9 @@ namespace processtrak_backend.Migrations
                     b.Navigation("user");
                 });
 
-            modelBuilder.Entity("processtrak_backend.Models.Schedule", b =>
+            modelBuilder.Entity("processtrak_backend.Models.Algorithm", b =>
                 {
-                    b.Navigation("processes");
+                    b.Navigation("scheduleRuns");
                 });
 
             modelBuilder.Entity("processtrak_backend.Models.User", b =>

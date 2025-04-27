@@ -12,5 +12,9 @@ namespace processtrak_backend.interfaces
         );
 
         Task<Schedule?> GetScheduleById(Guid id, Guid userId);
+
+        Task<List<Schedule>> GetAllSchedulesByUserIdAsync(Guid userId);
+
+        Task<bool> DeleteScheduleAsync(Guid scheduleId, Guid userId);
     }
 }

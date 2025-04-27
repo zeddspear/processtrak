@@ -107,6 +107,36 @@ public class ProcessesController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("runs/get-all")]
+    public async Task<IActionResult> GetAllSchedulesByUserId()
+    {
+        var userId = GetUserId();
+        var runs = await _schedulingService.GetAllSchedulesByUserIdAsync(userId);
+
+        if (runs == null)
+            return NotFound(new { Message = "Schedules not found" });
+
+        return Ok(runs);
+    }
+
+    [HttpDelete("runs/{id:guid}")]
+    public async Task<IActionResult> DeleteSchedule(Guid id)
+    {
+        var userId = GetUserId();
+        // Call the service to delete the schedule
+        bool isDeleted = await _schedulingService.DeleteScheduleAsync(id, userId);
+
+        // Return appropriate response based on deletion result
+        if (isDeleted)
+        {
+            return NoContent(); // 204 No Content indicates successful deletion
+        }
+        else
+        {
+            return NotFound(new { Message = "Schedule not found or does not belong to the user." }); // Optional message
+        }
+    }
+
     [HttpGet("runs/{id:guid}/stats")]
     public async Task<IActionResult> GetStats(Guid id)
     {
@@ -124,6 +154,8 @@ public class ProcessesController : ControllerBase
                 run.totalExecutionTime,
                 run.averageWaitingTime,
                 run.averageTurnaroundTime,
+                run.AlgorithmsJson,
+                run.ProcessesJson,
                 Algorithms = run.algorithms.Select(a => a.name),
                 Processes = run.processes.Select(p => new
                 {

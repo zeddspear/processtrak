@@ -8,10 +8,25 @@ import {
   updateProcess,
 } from "../api/processesService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Formik, Form, Field } from "formik";
+import * as Yup from "yup";
+
+const validationSchema = Yup.object({
+  processId: Yup.string().required("Process ID is required"),
+  name: Yup.string().required("Name is required"),
+  arrivalTime: Yup.number()
+    .min(0, "Arrival time must be at least 0")
+    .required("Arrival time is required"),
+  burstTime: Yup.number()
+    .min(1, "Burst time must be at least 1")
+    .required("Burst time is required"),
+  priority: Yup.number()
+    .min(1, "Priority must be at least 1")
+    .required("Priority is required"),
+});
 
 const Processes = () => {
   const queryClient = useQueryClient();
-
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [currentProcess, setCurrentProcess] = useState<Partial<Process> | null>(
@@ -43,7 +58,7 @@ const Processes = () => {
 
   const deleteProcessMutation = useMutation({
     mutationFn: (id: string) => {
-      return deleteProcess(id!);
+      return deleteProcess(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["processes"] });
@@ -60,7 +75,7 @@ const Processes = () => {
         name: "",
         arrivalTime: 0,
         burstTime: 0,
-        priority: 0,
+        priority: 1, // set default priority to 1
       });
       setIsEditing(false);
     }
@@ -72,39 +87,30 @@ const Processes = () => {
     setCurrentProcess(null);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCurrentProcess((prev) => ({
-      ...prev,
-      [name]:
-        name === "name" || name === "processId" ? value : parseInt(value, 10),
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!currentProcess) return;
-
+  const handleSubmit = async (
+    values: Partial<Process>,
+    { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void }
+  ) => {
     let response = null;
-
     try {
       if (isEditing) {
-        response = await updateProcessMutation.mutateAsync(currentProcess);
+        response = await updateProcessMutation.mutateAsync({
+          id: currentProcess?.id,
+          ...values,
+        });
       } else {
-        response = await createProcessMutation.mutateAsync(currentProcess);
+        response = await createProcessMutation.mutateAsync(values);
       }
-
       handleCloseModal();
     } catch (err) {
-      if (createProcessMutation.isError || updateProcessMutation.isError) {
-        setError(
-          `Failed to ${
-            isEditing ? "update" : "create"
-          } process. Please try again.`
-        );
-      }
+      console.log("Error happened: ", err);
+      setError(
+        `Failed to ${
+          isEditing ? "update" : "create"
+        } process. Please try again.`
+      );
     }
+    setSubmitting(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -198,21 +204,24 @@ const Processes = () => {
                     {process.burstTime}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                    {process.priority ?? "N/A"}
+                    {process.priority}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                     {process.isCompleted ? "Yes" : "No"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    <button
-                      onClick={() => handleOpenModal(process)}
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 mr-3"
-                    >
-                      <FaEdit />
-                    </button>
+                    {!process.isCompleted && (
+                      <button
+                        onClick={() => handleOpenModal(process)}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 mr-3 hover:cursor-pointer"
+                      >
+                        <FaEdit />
+                      </button>
+                    )}
+
                     <button
                       onClick={() => handleDelete(process.id)}
-                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:cursor-pointer"
                     >
                       <FaTrash />
                     </button>
@@ -227,118 +236,148 @@ const Processes = () => {
       {/* Add/Edit Process Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md shadow-lg">
             <div className="p-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                 {isEditing ? "Edit Process" : "Add New Process"}
               </h2>
-              <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label
-                    className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
-                    htmlFor="processId"
-                  >
-                    Process ID
-                  </label>
-                  <input
-                    type="text"
-                    id="processId"
-                    name="processId"
-                    disabled={isEditing}
-                    value={currentProcess?.processId || ""}
-                    onChange={handleInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div className="mb-4">
-                  <label
-                    className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
-                    htmlFor="name"
-                  >
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    disabled={isEditing}
-                    value={currentProcess?.name || ""}
-                    onChange={handleInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    required
-                  />
-                </div>
-                <div className="mb-4">
-                  <label
-                    className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
-                    htmlFor="arrivalTime"
-                  >
-                    Arrival Time
-                  </label>
-                  <input
-                    type="number"
-                    id="arrivalTime"
-                    name="arrivalTime"
-                    value={currentProcess?.arrivalTime || 0}
-                    onChange={handleInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    min="0"
-                    required
-                  />
-                </div>
-                <div className="mb-4">
-                  <label
-                    className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
-                    htmlFor="burstTime"
-                  >
-                    Burst Time
-                  </label>
-                  <input
-                    type="number"
-                    id="burstTime"
-                    name="burstTime"
-                    value={currentProcess?.burstTime || 0}
-                    onChange={handleInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    min="1"
-                    required
-                  />
-                </div>
-                <div className="mb-6">
-                  <label
-                    className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
-                    htmlFor="priority"
-                  >
-                    Priority
-                  </label>
-                  <input
-                    type="number"
-                    id="priority"
-                    name="priority"
-                    value={currentProcess?.priority || 0}
-                    onChange={handleInputChange}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    min="0"
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleCloseModal}
-                    className="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 px-4 rounded mr-2 hover:bg-gray-400 dark:hover:bg-gray-500 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={createProcessMutation.isPending}
-                    className="bg-blue-600 dark:bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition disabled:bg-gray-500 disabled:cursor-not-allowed"
-                  >
-                    {isEditing ? "Update" : "Create"}
-                  </button>
-                </div>
-              </form>
+              <Formik
+                initialValues={{
+                  processId: currentProcess?.processId || "",
+                  name: currentProcess?.name || "",
+                  arrivalTime: currentProcess?.arrivalTime || 0,
+                  burstTime: currentProcess?.burstTime || 1,
+                  priority: currentProcess?.priority || 1,
+                }}
+                validationSchema={validationSchema}
+                onSubmit={handleSubmit}
+              >
+                {({ errors, touched, isSubmitting }) => (
+                  <Form className="space-y-4">
+                    <div className="mb-4">
+                      <label
+                        className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
+                        htmlFor="processId"
+                      >
+                        Process ID
+                      </label>
+                      <Field
+                        name="processId"
+                        type="text"
+                        className="shadow-sm border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                        required
+                      />
+                      {errors.processId && touched.processId && (
+                        <p className="text-sm text-red-500">
+                          {errors.processId}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mb-4">
+                      <label
+                        className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
+                        htmlFor="name"
+                      >
+                        Name
+                      </label>
+                      <Field
+                        name="name"
+                        type="text"
+                        className="shadow-sm border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                        required
+                      />
+                      {errors.name && touched.name && (
+                        <p className="text-sm text-red-500">{errors.name}</p>
+                      )}
+                    </div>
+
+                    <div className="mb-4">
+                      <label
+                        className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
+                        htmlFor="arrivalTime"
+                      >
+                        Arrival Time
+                      </label>
+                      <Field
+                        name="arrivalTime"
+                        type="number"
+                        className="shadow-sm border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                        min="0"
+                        required
+                      />
+                      {errors.arrivalTime && touched.arrivalTime && (
+                        <p className="text-sm text-red-500">
+                          {errors.arrivalTime}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mb-4">
+                      <label
+                        className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
+                        htmlFor="burstTime"
+                      >
+                        Burst Time
+                      </label>
+                      <Field
+                        name="burstTime"
+                        type="number"
+                        className="shadow-sm border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                        min="1"
+                        required
+                      />
+                      {errors.burstTime && touched.burstTime && (
+                        <p className="text-sm text-red-500">
+                          {errors.burstTime}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mb-6">
+                      <label
+                        className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2"
+                        htmlFor="priority"
+                      >
+                        Priority
+                      </label>
+                      <Field
+                        name="priority"
+                        type="number"
+                        className="shadow-sm border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition"
+                        min="1"
+                        required
+                      />
+                      {errors.priority && touched.priority && (
+                        <p className="text-sm text-red-500">
+                          {errors.priority}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleCloseModal}
+                        className="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 px-4 rounded mr-2 hover:bg-gray-400 dark:hover:bg-gray-500 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="bg-blue-600 dark:bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition disabled:bg-gray-500 disabled:cursor-not-allowed"
+                      >
+                        {isSubmitting
+                          ? "Saving..."
+                          : isEditing
+                          ? "Update"
+                          : "Create"}
+                      </button>
+                    </div>
+                  </Form>
+                )}
+              </Formik>
             </div>
           </div>
         </div>

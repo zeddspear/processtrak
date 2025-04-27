@@ -46,6 +46,23 @@ const Home = () => {
             Start Scheduling
           </Link>
         </div>
+
+        {/* View Previous Schedules Box */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4">
+            View Previous Schedules
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
+            Check out the list of all the schedules you have run previously to
+            review your simulations and results.
+          </p>
+          <Link
+            to="/schedules" // Update the route to where you handle viewing previous schedules
+            className="block text-center px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white text-lg font-medium rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition"
+          >
+            View Schedules
+          </Link>
+        </div>
       </div>
     </div>
   );
