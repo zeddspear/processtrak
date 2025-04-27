@@ -57,7 +57,7 @@ const Home = () => {
             review your simulations and results.
           </p>
           <Link
-            to="/previous-schedules" // Update the route to where you handle viewing previous schedules
+            to="/schedules" // Update the route to where you handle viewing previous schedules
             className="block text-center px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white text-lg font-medium rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 transition"
           >
             View Schedules

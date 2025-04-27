@@ -94,3 +94,9 @@ export const deleteSchedule = async (id: string) => {
 
   return response.data;
 };
+
+export const fetchScheduleById = async (id: string) => {
+  const response = await api.get(`/processes/runs/${id}/stats`);
+
+  return response.data;
+};

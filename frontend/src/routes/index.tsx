@@ -10,6 +10,7 @@ import ResetPassword from "../pages/ResetPassword";
 import Processes from "../pages/Processes";
 import Scheduling from "../pages/Scheduling";
 import Schedules from "../pages/Schedules";
+import ScheduleDetailsPage from "../pages/ScheduleDetails";
 
 export const router = createBrowserRouter([
   {
@@ -59,10 +60,18 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "previous-schedules",
+        path: "schedules",
         element: (
           <ProtectedRoute>
             <Schedules />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "schedules/:id",
+        element: (
+          <ProtectedRoute>
+            <ScheduleDetailsPage />
           </ProtectedRoute>
         ),
       },

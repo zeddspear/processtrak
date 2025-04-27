@@ -4,12 +4,14 @@ import {
   fetchSchedules,
   deleteSchedule,
   Schedule,
-} from "../api/scheduleService"; // Assuming deleteSchedule exists in your api
+} from "../api/scheduleService";
 import { FaTrash } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 const Schedules = () => {
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: schedules, isLoading } = useQuery({
     queryKey: ["schedules"],
@@ -26,7 +28,8 @@ const Schedules = () => {
     },
   });
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Stop event propagation
     if (!confirm("Are you sure you want to delete this schedule?")) return;
 
     try {
@@ -91,11 +94,12 @@ const Schedules = () => {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {schedules?.map((schedule: Schedule, index: number) => {
-                const algorithms = schedule.algorithms.$values || [];
+                const algorithms = JSON.parse(schedule?.algorithmsJson) || [];
 
                 return (
                   <tr
                     key={schedule.id}
+                    onClick={() => navigate(`/schedules/${schedule.id}`)}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-all duration-200"
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-200">
@@ -104,7 +108,7 @@ const Schedules = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                       <div className="flex gap-1 items-center">
                         {algorithms
-                          .slice(0, 3)
+                          ?.slice(0, 3)
                           .map((algo: any, idx: number) => (
                             <span
                               key={idx}
@@ -117,7 +121,7 @@ const Schedules = () => {
                           <span
                             className="text-xs text-gray-500 dark:text-gray-400"
                             title={algorithms
-                              .map((a: any) => a.name)
+                              ?.map((a: any) => a.name)
                               .join(", ")}
                           >
                             +{algorithms.length - 3} more
@@ -134,10 +138,13 @@ const Schedules = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                       {schedule.totalExecutionTime} ms
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                    <td
+                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200"
+                      onClick={(e) => e.stopPropagation()} // Prevent row click from firing when clicking in actions cell
+                    >
                       <button
                         className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:cursor-pointer"
-                        onClick={() => handleDelete(schedule.id)}
+                        onClick={(e) => handleDelete(schedule.id, e)}
                       >
                         <FaTrash />
                       </button>

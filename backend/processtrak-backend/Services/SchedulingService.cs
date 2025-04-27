@@ -42,15 +42,15 @@ namespace processtrak_backend.Services
                     algorithms = algorithms,
                 };
 
-                // Set the JSON fields
-                scheduleRun.ProcessesJson = JsonSerializer.Serialize(processes);
-                scheduleRun.AlgorithmsJson = JsonSerializer.Serialize(algorithms);
-
                 foreach (var algorithm in algorithms)
                 {
                     // Execute algorithm logic on processes
                     ExecuteAlgorithm(processes, algorithm.name, timeQuantum);
                 }
+
+                // Set the JSON fields
+                scheduleRun.ProcessesJson = JsonSerializer.Serialize(processes);
+                scheduleRun.AlgorithmsJson = JsonSerializer.Serialize(algorithms);
 
                 // Calculate stats
                 scheduleRun.endTime = DateTime.UtcNow;
@@ -92,11 +92,23 @@ namespace processtrak_backend.Services
         {
             try
             {
-                // Fetch all schedules for the specified user, including related processes and algorithms
+                // Fetch all schedules for the specified user
                 var schedules = await _context
-                    .Schedules.Include(sr => sr.processes) // Include related processes
-                    .Include(sr => sr.algorithms) // Include related algorithms
-                    .Where(sr => sr.userId == userId) // Filter by user ID
+                    .Schedules.Where(sr => sr.userId == userId) // Filter by user ID
+                    .Select(sr => new Schedule
+                    {
+                        id = sr.id,
+                        userId = sr.userId,
+                        startTime = sr.startTime,
+                        endTime = sr.endTime,
+                        totalExecutionTime = sr.totalExecutionTime,
+                        averageWaitingTime = sr.averageWaitingTime,
+                        averageTurnaroundTime = sr.averageTurnaroundTime,
+                        ProcessesJson = sr.ProcessesJson,
+                        AlgorithmsJson = sr.AlgorithmsJson,
+                        processes = sr.processes ?? new List<Process>(), // Ensure a non-null list
+                        algorithms = sr.algorithms ?? new List<Algorithm>(), // Ensure a non-null list
+                    })
                     .ToListAsync(); // Execute the query and return the results
 
                 return schedules; // Return the list of schedules
