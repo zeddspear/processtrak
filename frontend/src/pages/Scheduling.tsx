@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FaClock, FaExclamationTriangle } from "react-icons/fa";
 import {
   GanttChartItem,
@@ -24,27 +24,6 @@ const Scheduling = () => {
     waiting: 0,
     totalExecutionTime: 0,
   });
-
-  // Predefined algorithms - in a real app, these might come from the backend
-  //   const algorithms: Algorithm[] = [
-  //     {
-  //       id: "fcfs",
-  //       name: "First Come First Serve (FCFS)",
-  //       requiresQuantum: false,
-  //     },
-  //     {
-  //       id: "sjf",
-  //       name: "Shortest Job First (SJF) - Non-Preemptive",
-  //       requiresQuantum: false,
-  //     },
-  //     {
-  //       id: "srtf",
-  //       name: "Shortest Remaining Time First (SRTF) - Preemptive",
-  //       requiresQuantum: false,
-  //     },
-  //     { id: "priority", name: "Priority Scheduling", requiresQuantum: false },
-  //     { id: "roundrobin", name: "Round Robin", requiresQuantum: true },
-  //   ];
 
   // Fetching all processes
   const {

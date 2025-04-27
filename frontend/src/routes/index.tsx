@@ -9,6 +9,7 @@ import ForgotPassword from "../pages/ForgotPassword";
 import ResetPassword from "../pages/ResetPassword";
 import Processes from "../pages/Processes";
 import Scheduling from "../pages/Scheduling";
+import Schedules from "../pages/Schedules";
 
 export const router = createBrowserRouter([
   {
@@ -54,6 +55,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Scheduling />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "previous-schedules",
+        element: (
+          <ProtectedRoute>
+            <Schedules />
           </ProtectedRoute>
         ),
       },

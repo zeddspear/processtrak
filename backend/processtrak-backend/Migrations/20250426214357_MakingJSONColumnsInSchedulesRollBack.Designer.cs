@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using processtrak_backend.Api.data;
@@ -11,9 +12,11 @@ using processtrak_backend.Api.data;
 namespace processtrak_backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250426214357_MakingJSONColumnsInSchedulesRollBack")]
+    partial class MakingJSONColumnsInSchedulesRollBack
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -189,14 +192,6 @@ namespace processtrak_backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("uuid_generate_v4()");
-
-                    b.Property<string>("AlgorithmsJson")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ProcessesJson")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<int>("averageTurnaroundTime")
                         .HasColumnType("integer");
