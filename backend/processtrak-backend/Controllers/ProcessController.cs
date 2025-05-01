@@ -156,6 +156,7 @@ public class ProcessesController : ControllerBase
                 run.averageTurnaroundTime,
                 run.AlgorithmsJson,
                 run.ProcessesJson,
+                run.ExecutionLogJson,
                 Algorithms = run.algorithms.Select(a => a.name),
                 Processes = run.processes.Select(p => new
                 {

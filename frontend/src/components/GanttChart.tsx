@@ -52,13 +52,13 @@ const GanttChart: React.FC<GanttChartProps> = ({
   const getProcessColor = React.useMemo(() => {
     const colorCache = new Map<string, string>();
 
-    return (id: string) => {
-      if (colorCache.has(id)) return colorCache.get(id)!;
+    return (key: string) => {
+      if (colorCache.has(key)) return colorCache.get(key)!;
 
       // Improved color generation algorithm
       let hash = 0;
-      for (let i = 0; i < id.length; i++) {
-        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+      for (let i = 0; i < key.length; i++) {
+        hash = key.charCodeAt(i) + ((hash << 5) - hash);
       }
 
       const h = Math.abs(hash % 360);
@@ -66,7 +66,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
       const l = 50 + (hash % 20); // Lightness between 50-70%
 
       const color = `hsl(${h}, ${s}%, ${l}%)`;
-      colorCache.set(id, color);
+      colorCache.set(key, color);
       return color;
     };
   }, []);
@@ -95,6 +95,17 @@ const GanttChart: React.FC<GanttChartProps> = ({
 
   const displayKeys = getAllDisplayKeys();
 
+  // Group items by process id
+  const groupedItems = items.reduce((acc, item) => {
+    if (!acc[item.key]) acc[item.key] = [];
+    acc[item.key].push(item);
+    return acc;
+  }, {} as Record<string, GanttChartItem[]>);
+
+  const processIds = Object.keys(groupedItems);
+
+  console.log("ProcessIds: ", processIds);
+
   // State for hovered item
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
@@ -113,78 +124,82 @@ const GanttChart: React.FC<GanttChartProps> = ({
           }}
         >
           {/* Timeline bars */}
-          {items.map((item, index) => {
-            const duration = item.endValue - item.startValue;
-            const left = (item.startValue - minValue) * scaleFactor;
-            const barWidth = Math.max(20, duration * scaleFactor);
-            const color = getProcessColor(item.id);
-            const isHovered = hoveredItem === item.id;
+          {processIds.map((processId, rowIndex) => {
+            const segments = groupedItems[processId];
+            const color = getProcessColor(processId);
+            const isHovered = hoveredItem === processId;
 
-            return (
-              <motion.div
-                key={`${item.id}-${index}`}
-                className="absolute flex items-center group"
-                style={{
-                  left: `${left}px`,
-                  width: `${barWidth}px`,
-                  height: `${barHeight}px`,
-                  top: `${index * (barHeight + 12)}px`,
-                  backgroundColor: color,
-                  borderRadius: `${barBorderRadius}px`,
-                  zIndex: isHovered ? 10 : 1,
-                }}
-                initial={{ opacity: 0.9 }}
-                animate={{
-                  opacity: isHovered ? 1 : 0.9,
-                  scale: isHovered && barHoverEffect ? 1.02 : 1,
-                  boxShadow:
-                    isHovered && barHoverEffect
-                      ? `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`
-                      : "none",
-                }}
-                transition={{ duration: 0.2 }}
-                onMouseEnter={() => setHoveredItem(item.id)}
-                onMouseLeave={() => setHoveredItem(null)}
-                data-tooltip-id={`tooltip-${item.id}`}
-              >
-                <div className="px-2 py-1 text-xs font-medium text-white truncate w-full text-center">
-                  {item.name}
-                </div>
+            return segments.map((item, segmentIndex) => {
+              const duration = item.endValue - item.startValue;
+              const left = (item.startValue - minValue) * scaleFactor;
+              const barWidth = Math.max(20, duration * scaleFactor);
 
-                {/* Enhanced Tooltip */}
-                {showTooltips && (
-                  <Tooltip
-                    id={`tooltip-${item.id}`}
-                    place="top"
-                    className="!bg-white dark:!bg-gray-700 !text-gray-800 dark:!text-gray-200 !p-4 !rounded-lg !shadow-xl !max-w-xs !border !border-gray-200 dark:!border-gray-600 z-50"
-                  >
-                    <div className="space-y-2">
-                      <div className="font-bold text-sm">{item.name}</div>
-                      <div className="flex items-center">
-                        <div
-                          className="w-3 h-3 rounded-sm mr-2"
-                          style={{ backgroundColor: color }}
-                        />
-                        <span className="text-xs">
-                          {timeFormat(item.startValue)} -{" "}
-                          {timeFormat(item.endValue)}
-                        </span>
+              return (
+                <motion.div
+                  key={`${item.id}-${segmentIndex}`}
+                  className="absolute flex items-center group"
+                  style={{
+                    left: `${left}px`,
+                    width: `${barWidth}px`,
+                    height: `${barHeight}px`,
+                    top: `${rowIndex * (barHeight + 12)}px`,
+                    backgroundColor: color,
+                    borderRadius: `${barBorderRadius}px`,
+                    zIndex: isHovered ? 10 : 1,
+                  }}
+                  initial={{ opacity: 0.9 }}
+                  animate={{
+                    opacity: isHovered ? 1 : 0.9,
+                    scale: isHovered && barHoverEffect ? 1.02 : 1,
+                    boxShadow:
+                      isHovered && barHoverEffect
+                        ? `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`
+                        : "none",
+                  }}
+                  transition={{ duration: 0.2 }}
+                  onMouseEnter={() => setHoveredItem(processId)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  data-tooltip-id={`tooltip-${item.id}-${segmentIndex}`}
+                >
+                  <div className="px-2 py-1 text-xs font-medium text-white truncate w-full text-center">
+                    {item.name}
+                  </div>
+
+                  {/* Tooltip */}
+                  {showTooltips && (
+                    <Tooltip
+                      id={`tooltip-${item.id}-${segmentIndex}`}
+                      place="top"
+                      className="!bg-white dark:!bg-gray-700 !text-gray-800 dark:!text-gray-200 !p-4 !rounded-lg !shadow-xl !max-w-xs !border !border-gray-200 dark:!border-gray-600 z-50"
+                    >
+                      <div className="space-y-2">
+                        <div className="font-bold text-sm">{item.name}</div>
+                        <div className="flex items-center">
+                          <div
+                            className="w-3 h-3 rounded-sm mr-2"
+                            style={{ backgroundColor: color }}
+                          />
+                          <span className="text-xs">
+                            {timeFormat(item.startValue)} -{" "}
+                            {timeFormat(item.endValue)}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {displayKeys.map((key) => (
+                            <React.Fragment key={key}>
+                              <div className="font-semibold">
+                                {formatKeyName(key)}:
+                              </div>
+                              <div>{item[key] ?? "N/A"}</div>
+                            </React.Fragment>
+                          ))}
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        {displayKeys.map((key) => (
-                          <React.Fragment key={key}>
-                            <div className="font-semibold">
-                              {formatKeyName(key)}:
-                            </div>
-                            <div>{item[key] ?? "N/A"}</div>
-                          </React.Fragment>
-                        ))}
-                      </div>
-                    </div>
-                  </Tooltip>
-                )}
-              </motion.div>
-            );
+                    </Tooltip>
+                  )}
+                </motion.div>
+              );
+            });
           })}
 
           {/* Timeline axis */}
@@ -216,22 +231,22 @@ const GanttChart: React.FC<GanttChartProps> = ({
               LEGEND
             </h3>
             <div className="flex flex-wrap gap-3">
-              {items.map((item) => {
-                const color = getProcessColor(item.id);
+              {processIds.map((processId, idx) => {
+                const color = getProcessColor(processId);
                 return (
                   <motion.div
-                    key={item.id}
+                    key={`${processId}-${idx}`}
                     className={`flex items-center px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 ${
-                      hoveredItem === item.id ? "ring-2 ring-opacity-50" : ""
+                      hoveredItem === processId ? "ring-2 ring-opacity-50" : ""
                     }`}
                     style={
                       {
-                        borderColor: hoveredItem === item.id ? color : "",
+                        borderColor: hoveredItem === processId ? color : "",
                         "--ring-color": color,
                       } as React.CSSProperties
                     }
                     whileHover={{ scale: 1.05 }}
-                    onMouseEnter={() => setHoveredItem(item.id)}
+                    onMouseEnter={() => setHoveredItem(processId)}
                     onMouseLeave={() => setHoveredItem(null)}
                   >
                     <div
@@ -239,7 +254,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
                       style={{ backgroundColor: color }}
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {item.name}
+                      {items[idx].name}
                     </span>
                   </motion.div>
                 );

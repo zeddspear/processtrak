@@ -40,7 +40,10 @@ namespace processtrak_backend.Services
 
     public static class StaticAlgorithmService
     {
-        public static void ExecuteFCFS(List<Process> processes)
+        public static void ExecuteFCFS(
+            List<Process> processes,
+            List<ExecutionLogEntry> executionLog
+        )
         {
             // Sort processes by Arrival Time
             processes.Sort(
@@ -52,33 +55,45 @@ namespace processtrak_backend.Services
 
             foreach (var process in processes)
             {
-                // Wait for the process to arrive
+                if (process.arrivalTime is null)
+                    continue;
+
+                // Wait if process hasn't arrived yet
                 if (currentTime < process.arrivalTime)
                 {
-                    currentTime = process.arrivalTime ?? 0;
+                    currentTime = process.arrivalTime.Value;
                 }
 
-                // Calculate completion time
-                process.completionTime = currentTime + process.burstTime;
+                int startTime = currentTime;
+                int endTime = currentTime + (process.burstTime ?? 0);
 
-                // Calculate turnaround time
-                process.turnaroundTime = process.completionTime - process.arrivalTime;
+                // Record execution log
+                executionLog.Add(
+                    new ExecutionLogEntry
+                    {
+                        processId = process.id,
+                        startTime = startTime,
+                        endTime = endTime,
+                    }
+                );
 
-                // Calculate waiting time
+                // Update process times
+                process.completionTime = endTime;
+                process.turnaroundTime = endTime - process.arrivalTime;
                 process.waitingTime = process.turnaroundTime - process.burstTime;
 
-                // Update current time
-                currentTime = process.completionTime ?? 0;
+                // Advance time
+                currentTime = endTime;
             }
         }
 
-        public static void ExecuteSJF(List<Process> processes)
+        public static void ExecuteSJF(List<Process> processes, List<ExecutionLogEntry> executionLog)
         {
             int n = processes.Count;
             int completed = 0;
             int currentTime = 0;
 
-            // Sort by arrival time to handle processes in the order they can arrive
+            // Sort by arrival time initially
             processes = processes.OrderBy(p => p.arrivalTime).ToList();
 
             while (completed < n)
@@ -86,72 +101,103 @@ namespace processtrak_backend.Services
                 // Get all processes that have arrived but are not yet completed
                 var availableProcesses = processes
                     .Where(p => p.arrivalTime <= currentTime && !p.isCompleted.GetValueOrDefault())
-                    .OrderBy(p => p.burstTime) // SJF => pick the shortest burst
+                    .OrderBy(p => p.burstTime)
                     .ToList();
 
                 if (availableProcesses.Count == 0)
                 {
-                    // If no process has arrived yet, simply move time forward
+                    // No process available, move forward in time
                     currentTime++;
                 }
                 else
                 {
-                    // Pick process with the smallest burst time
                     var shortestJob = availableProcesses.First();
 
-                    // Schedule that process
-                    shortestJob.completionTime = currentTime + shortestJob.burstTime;
-                    shortestJob.turnaroundTime =
-                        shortestJob.completionTime - shortestJob.arrivalTime;
+                    int startTime = currentTime;
+                    int endTime = startTime + (shortestJob.burstTime ?? 0);
+
+                    // Record execution log
+                    executionLog.Add(
+                        new ExecutionLogEntry
+                        {
+                            processId = shortestJob.id,
+                            startTime = startTime,
+                            endTime = endTime,
+                        }
+                    );
+
+                    // Update process stats
+                    shortestJob.completionTime = endTime;
+                    shortestJob.turnaroundTime = endTime - shortestJob.arrivalTime;
                     shortestJob.waitingTime = shortestJob.turnaroundTime - shortestJob.burstTime;
                     shortestJob.isCompleted = true;
 
-                    // Update current time
-                    currentTime = shortestJob.completionTime.GetValueOrDefault();
+                    currentTime = endTime;
                     completed++;
                 }
             }
         }
 
-        public static void ExecuteSRTF(List<Process> processes)
+        public static void ExecuteSRTF(
+            List<Process> processes,
+            List<ExecutionLogEntry> executionLog
+        )
         {
             int currentTime = 0;
             int completed = 0;
             int n = processes.Count;
 
-            // Initialize RemainingTime to BurstTime
             foreach (var p in processes)
             {
                 p.remainingTime = p.burstTime;
             }
 
-            // Sort initially by ArrivalTime (just to organize data, not strictly mandatory for SRTF)
             processes = processes.OrderBy(p => p.arrivalTime).ToList();
+
+            Process? lastProcess = null;
+            int? executionStart = null;
 
             while (completed < n)
             {
-                // Select the process with the smallest remaining time among the arrived ones
                 var availableProcesses = processes
                     .Where(p => p.arrivalTime <= currentTime && !p.isCompleted.GetValueOrDefault())
                     .OrderBy(p => p.remainingTime)
-                    .ThenBy(p => p.arrivalTime) // tie-breaker: earlier arrival
+                    .ThenBy(p => p.arrivalTime)
                     .ToList();
 
                 if (availableProcesses.Count == 0)
                 {
-                    // No process has arrived yet, or all arrived processes are completed.
-                    // Move time forward until the next process arrival.
                     currentTime++;
                     continue;
                 }
 
-                var currentProcess = availableProcesses.First(); // process with smallest remaining time
+                var currentProcess = availableProcesses.First();
 
-                // Run it for 1 time unit
+                // Start of a new execution segment
+                if (lastProcess == null || currentProcess.id != lastProcess.id)
+                {
+                    // If last process was executing, close its segment
+                    if (lastProcess != null && executionStart.HasValue)
+                    {
+                        executionLog.Add(
+                            new ExecutionLogEntry
+                            {
+                                processId = lastProcess.id,
+                                startTime = executionStart.Value,
+                                endTime = currentTime,
+                            }
+                        );
+                    }
+
+                    // Start new segment
+                    executionStart = currentTime;
+                    lastProcess = currentProcess;
+                }
+
+                // Execute for 1 time unit
                 currentProcess.remainingTime--;
                 currentTime++;
 
-                // Check if completed
                 if (currentProcess.remainingTime == 0)
                 {
                     currentProcess.isCompleted = true;
@@ -161,11 +207,43 @@ namespace processtrak_backend.Services
                     currentProcess.waitingTime =
                         currentProcess.turnaroundTime - currentProcess.burstTime;
                     completed++;
+
+                    // Close the current execution segment
+                    if (executionStart.HasValue)
+                    {
+                        executionLog.Add(
+                            new ExecutionLogEntry
+                            {
+                                processId = currentProcess.id,
+                                startTime = executionStart.Value,
+                                endTime = currentTime,
+                            }
+                        );
+
+                        executionStart = null;
+                        lastProcess = null;
+                    }
                 }
+            }
+
+            // Finalize any remaining open segment (if loop exits unexpectedly)
+            if (lastProcess != null && executionStart.HasValue)
+            {
+                executionLog.Add(
+                    new ExecutionLogEntry
+                    {
+                        processId = lastProcess.id,
+                        startTime = executionStart.Value,
+                        endTime = currentTime,
+                    }
+                );
             }
         }
 
-        public static void RunPrioritySchedulingNonPreemptive(List<Process> processes)
+        public static void RunPrioritySchedulingNonPreemptive(
+            List<Process> processes,
+            List<ExecutionLogEntry> executionLog
+        )
         {
             int currentTime = 0;
             int completed = 0;
@@ -179,24 +257,29 @@ namespace processtrak_backend.Services
                 // Get all processes that have arrived but are not yet completed
                 var arrivedProcesses = processes
                     .Where(p => p.arrivalTime <= currentTime && !p.isCompleted.GetValueOrDefault())
-                    // Sort by priority ASC (smaller number = higher priority),
-                    // tie-breaker by arrival time
-                    .OrderBy(p => p.priority)
+                    .OrderBy(p => p.priority) // lower number = higher priority
                     .ThenBy(p => p.arrivalTime)
                     .ToList();
 
                 if (arrivedProcesses.Count == 0)
                 {
-                    // No process has arrived yet or all arrived processes have completed
-                    // Move time forward until the next arrival
                     currentTime++;
                 }
                 else
                 {
-                    // Pick the process with the highest priority (lowest Priority value)
                     var highestPriorityProcess = arrivedProcesses.First();
 
-                    // Run it to completion (non-preemptive)
+                    // Record execution in the log
+                    executionLog.Add(
+                        new ExecutionLogEntry
+                        {
+                            processId = highestPriorityProcess.id,
+                            startTime = currentTime,
+                            endTime = currentTime + (highestPriorityProcess.burstTime ?? 0),
+                        }
+                    );
+
+                    // Update process times
                     highestPriorityProcess.completionTime =
                         currentTime + highestPriorityProcess.burstTime;
                     highestPriorityProcess.turnaroundTime =
@@ -205,52 +288,83 @@ namespace processtrak_backend.Services
                         highestPriorityProcess.turnaroundTime - highestPriorityProcess.burstTime;
                     highestPriorityProcess.isCompleted = true;
 
-                    // Update currentTime
                     currentTime = highestPriorityProcess.completionTime.GetValueOrDefault();
                     completed++;
                 }
             }
         }
 
-        public static void RunPrioritySchedulingPreemptive(List<Process> processes)
+        public static void RunPrioritySchedulingPreemptive(
+            List<Process> processes,
+            List<ExecutionLogEntry> executionLog
+        )
         {
             int currentTime = 0;
             int completed = 0;
             int n = processes.Count;
 
-            // Initialize RemainingTime to BurstTime
             foreach (var p in processes)
             {
                 p.remainingTime = p.burstTime;
             }
 
-            // Sort primarily by arrival time to handle the earliest arrivals first
             processes = processes.OrderBy(p => p.arrivalTime).ToList();
+
+            Process? lastProcess = null;
+            int executionStart = -1;
 
             while (completed < n)
             {
-                // 1) Get all processes that have arrived but not completed
                 var arrivedProcesses = processes
                     .Where(p => p.arrivalTime <= currentTime && !p.isCompleted.GetValueOrDefault())
-                    .OrderBy(p => p.priority) // smaller number = higher priority
-                    .ThenBy(p => p.arrivalTime) // tie-breaker by arrival time
+                    .OrderBy(p => p.priority)
+                    .ThenBy(p => p.arrivalTime)
                     .ToList();
 
-                // 2) If no process is available, move time forward
                 if (arrivedProcesses.Count == 0)
                 {
+                    // If no process is ready, close current running segment (if any)
+                    if (lastProcess != null)
+                    {
+                        executionLog.Add(
+                            new ExecutionLogEntry
+                            {
+                                processId = lastProcess.id,
+                                startTime = executionStart,
+                                endTime = currentTime,
+                            }
+                        );
+                        lastProcess = null;
+                    }
+
                     currentTime++;
                     continue;
                 }
 
-                // 3) Pick the highest priority (lowest Priority value) process
                 var currentProcess = arrivedProcesses.First();
 
-                // 4) Run it for 1 time unit
+                // If the process being executed has changed, close the previous execution log
+                if (lastProcess == null || lastProcess.id != currentProcess.id)
+                {
+                    if (lastProcess != null)
+                    {
+                        executionLog.Add(
+                            new ExecutionLogEntry
+                            {
+                                processId = lastProcess.id,
+                                startTime = executionStart,
+                                endTime = currentTime,
+                            }
+                        );
+                    }
+
+                    lastProcess = currentProcess;
+                    executionStart = currentTime;
+                }
+
                 currentProcess.remainingTime--;
                 currentTime++;
 
-                // 5) If the process has finished
                 if (currentProcess.remainingTime == 0)
                 {
                     currentProcess.isCompleted = true;
@@ -260,29 +374,62 @@ namespace processtrak_backend.Services
                     currentProcess.waitingTime =
                         currentProcess.turnaroundTime - currentProcess.burstTime;
                     completed++;
+
+                    // Finish the execution log for this process
+                    executionLog.Add(
+                        new ExecutionLogEntry
+                        {
+                            processId = currentProcess.id,
+                            startTime = executionStart,
+                            endTime = currentTime,
+                        }
+                    );
+
+                    lastProcess = null;
                 }
+            }
+
+            // In case the last process ends at the very end and isn't logged
+            if (lastProcess != null && executionStart < currentTime)
+            {
+                executionLog.Add(
+                    new ExecutionLogEntry
+                    {
+                        processId = lastProcess.id,
+                        startTime = executionStart,
+                        endTime = currentTime,
+                    }
+                );
             }
         }
 
-        public static void RunRoundRobin(List<Process> processes, int timeQuantum)
+        public static void RunRoundRobin(
+            List<Process> processes,
+            int timeQuantum,
+            List<ExecutionLogEntry> executionLog
+        )
         {
-            // Sort processes by ArrivalTime (helps to manage them in order)
+            // Sort processes by ArrivalTime
             processes = processes.OrderBy(p => p.arrivalTime).ToList();
 
-            // Ready Queue to store process IDs or references
             Queue<Process> readyQueue = new Queue<Process>();
 
             int currentTime = 0;
             int completed = 0;
             int n = processes.Count;
 
-            // For convenience, index to track processes that have "arrived"
+            // Track arrived processes
             int index = 0;
 
-            // Keep running until all processes complete
+            // Initialize remainingTime for all processes
+            foreach (var process in processes)
+            {
+                process.remainingTime = process.burstTime;
+            }
+
             while (completed < n)
             {
-                // Enqueue newly arrived processes whose arrival time <= currentTime
+                // Enqueue processes that have arrived
                 while (index < n && processes[index].arrivalTime <= currentTime)
                 {
                     readyQueue.Enqueue(processes[index]);
@@ -291,40 +438,42 @@ namespace processtrak_backend.Services
 
                 if (readyQueue.Count == 0)
                 {
-                    // No process is in the queue, so CPU is idle
-                    // Move time to the arrival time of the next process
-                    if (index < n && processes[index].arrivalTime > currentTime)
+                    // No process is ready, move to next arrival
+                    if (index < n)
                     {
-                        currentTime = processes[index].arrivalTime.GetValueOrDefault();
+                        currentTime = processes[index].arrivalTime.GetValueOrDefault(currentTime);
                         continue;
                     }
                 }
                 else
                 {
-                    // Get the front process
-                    Process currentProcess = readyQueue.Dequeue();
+                    var currentProcess = readyQueue.Dequeue();
 
-                    // Run the process for 'timeQuantum' or until it finishes
                     int timeSlice = Math.Min(
                         timeQuantum,
                         currentProcess.remainingTime.GetValueOrDefault()
                     );
-
-                    // Advance the current time by the time slice
+                    int executionStart = currentTime;
                     currentTime += timeSlice;
-
-                    // Decrease the remaining time of the process
                     currentProcess.remainingTime -= timeSlice;
 
-                    // Again, enqueue newly arrived processes during this time slice
-                    // Because a process might arrive while we're executing
+                    // Log execution segment
+                    executionLog.Add(
+                        new ExecutionLogEntry
+                        {
+                            processId = currentProcess.id,
+                            startTime = executionStart,
+                            endTime = currentTime,
+                        }
+                    );
+
+                    // Enqueue new arrivals during execution slice
                     while (index < n && processes[index].arrivalTime <= currentTime)
                     {
                         readyQueue.Enqueue(processes[index]);
                         index++;
                     }
 
-                    // If the process is completed
                     if (currentProcess.remainingTime == 0)
                     {
                         currentProcess.isCompleted = true;
@@ -337,7 +486,7 @@ namespace processtrak_backend.Services
                     }
                     else
                     {
-                        // If it's not finished, place it back to the queue
+                        // Not finished, re-queue it
                         readyQueue.Enqueue(currentProcess);
                     }
                 }

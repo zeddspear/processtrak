@@ -14,6 +14,8 @@ namespace processtrak_backend.Models
         public string ProcessesJson { get; set; } = string.Empty; // JSON representation of processes
         public string AlgorithmsJson { get; set; } = string.Empty; // JSON representation of algorithms
 
+        public string ExecutionLogJson { get; set; } = string.Empty; // NEW: List of {processId, startTime, endTime}
+
         public int totalExecutionTime { get; set; }
         public int averageWaitingTime { get; set; }
         public int averageTurnaroundTime { get; set; }

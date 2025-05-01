@@ -33,26 +33,30 @@ const ScheduleDetailsPage = () => {
     );
   }
 
-  // Parse the JSON data
   const algorithms = JSON.parse(schedule.algorithmsJson);
   const processes = JSON.parse(schedule.processesJson);
+  const executionLog = JSON.parse(schedule.executionLogJson);
 
-  // Prepare data for the components
-  const ganttItems = processes
-    .filter((p: any) => p.completionTime !== undefined)
-    .map((p: any) => ({
-      id: p.processId.toString(),
+  // Map for process metadata lookup
+  const processMap = Object.fromEntries(processes.map((p: any) => [p.id, p]));
+
+  const ganttItems = executionLog.map((log: any, index: number) => {
+    const p = processMap[log.processId];
+
+    return {
+      id: `${log.processId}-${index}`, // unique id per segment
+      key: `${log.processId}`,
       name: p.name,
-      startValue: p.arrivalTime,
-      endValue: p.completionTime,
+      startValue: log.startTime,
+      endValue: log.endTime,
       processId: p.processId,
       processName: p.name,
       arrivalTime: p.arrivalTime,
       burstTime: p.burstTime,
       priority: p.priority,
       endTime: p.completionTime,
-    }))
-    .sort((a: any, b: any) => a.startValue - b.startValue);
+    };
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">

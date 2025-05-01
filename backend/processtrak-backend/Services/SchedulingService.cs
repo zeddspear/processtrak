@@ -42,15 +42,18 @@ namespace processtrak_backend.Services
                     algorithms = algorithms,
                 };
 
+                var executionLog = new List<ExecutionLogEntry>();
+
                 foreach (var algorithm in algorithms)
                 {
                     // Execute algorithm logic on processes
-                    ExecuteAlgorithm(processes, algorithm.name, timeQuantum);
+                    ExecuteAlgorithm(processes, algorithm.name, timeQuantum, executionLog);
                 }
 
                 // Set the JSON fields
                 scheduleRun.ProcessesJson = JsonSerializer.Serialize(processes);
                 scheduleRun.AlgorithmsJson = JsonSerializer.Serialize(algorithms);
+                scheduleRun.ExecutionLogJson = JsonSerializer.Serialize(executionLog);
 
                 // Calculate stats
                 scheduleRun.endTime = DateTime.UtcNow;
@@ -160,7 +163,8 @@ namespace processtrak_backend.Services
         private void ExecuteAlgorithm(
             List<Process> processes,
             string algorithmName,
-            int timeQuantum
+            int timeQuantum,
+            List<ExecutionLogEntry> executionLog
         )
         {
             // Add scheduling logic for each algorithm
@@ -168,27 +172,30 @@ namespace processtrak_backend.Services
             {
                 case "fcfs":
                     // First-Come, First-Served logic
-                    StaticAlgorithmService.ExecuteFCFS(processes);
+                    StaticAlgorithmService.ExecuteFCFS(processes, executionLog);
                     break;
                 case "sjf":
                     // Shortest Job First logic
-                    StaticAlgorithmService.ExecuteSJF(processes);
+                    StaticAlgorithmService.ExecuteSJF(processes, executionLog);
                     break;
                 case "srtf":
                     // Shortest remaining time first
-                    StaticAlgorithmService.ExecuteSRTF(processes);
+                    StaticAlgorithmService.ExecuteSRTF(processes, executionLog);
                     break;
                 case "priority_non_preemptive":
                     // Priority (non-pre-emptive) scheduling logic
-                    StaticAlgorithmService.RunPrioritySchedulingNonPreemptive(processes);
+                    StaticAlgorithmService.RunPrioritySchedulingNonPreemptive(
+                        processes,
+                        executionLog
+                    );
                     break;
                 case "priority_preemptive":
                     // Priority (non-pre-emptive) scheduling logic
-                    StaticAlgorithmService.RunPrioritySchedulingPreemptive(processes);
+                    StaticAlgorithmService.RunPrioritySchedulingPreemptive(processes, executionLog);
                     break;
                 case "rr":
                     // Round Robin logic
-                    StaticAlgorithmService.RunRoundRobin(processes, timeQuantum);
+                    StaticAlgorithmService.RunRoundRobin(processes, timeQuantum, executionLog);
                     break;
             }
         }

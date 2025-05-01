@@ -110,71 +110,72 @@ const Scheduling = () => {
 
       const response: any = await runSchedulingMutation.mutateAsync(data);
 
-      // Process results from API
       if (response) {
-        // Use processesJson if available, otherwise fallback to $values
-        const processesData = response.processesJson
+        const processes = response.processesJson
           ? JSON.parse(response.processesJson)
           : response.processes?.$values || [];
 
-        setResults(processesData);
+        const executionLog = response.executionLogJson
+          ? JSON.parse(response.executionLogJson)
+          : [];
 
-        // Calculate average metrics
-        const totalProcesses = processesData.length;
-        if (totalProcesses > 0) {
-          const avgTurnaround =
-            response.averageTurnaroundTime ||
-            processesData.reduce(
-              (sum: number, p: Process) => sum + (p.turnaroundTime || 0),
-              0
-            ) / totalProcesses;
+        setResults(processes);
 
-          const avgWaiting =
-            response.averageWaitingTime ||
-            processesData.reduce(
-              (sum: number, p: Process) => sum + (p.waitingTime || 0),
-              0
-            ) / totalProcesses;
+        // Set averages
+        const totalProcesses = processes.length;
+        const avgTurnaround =
+          response.averageTurnaroundTime ||
+          processes.reduce(
+            (sum: number, p: Process) => sum + (p.turnaroundTime || 0),
+            0
+          ) / totalProcesses;
 
-          const totalExecTime =
-            response.totalExecutionTime ||
-            Math.max(
-              ...processesData.map((p: Process) => p.completionTime || 0)
-            );
+        const avgWaiting =
+          response.averageWaitingTime ||
+          processes.reduce(
+            (sum: number, p: Process) => sum + (p.waitingTime || 0),
+            0
+          ) / totalProcesses;
 
-          setAverageMetrics({
-            turnaround: avgTurnaround,
-            waiting: avgWaiting,
-            totalExecutionTime: totalExecTime,
-          });
+        const totalExecTime =
+          response.totalExecutionTime ||
+          Math.max(...processes.map((p: Process) => p.completionTime || 0));
 
-          // Generate Gantt chart data
-          const ganttItems = processesData
-            .filter((p: Process) => p.completionTime !== undefined)
-            .map((p: Process) => ({
-              id: p.processId.toString(),
-              name: p.name,
-              startValue: p.arrivalTime,
-              endValue: p.completionTime,
-              // Keep original properties for reference if needed
-              processId: p.processId,
-              processName: p.name,
-              arrivalTime: p.arrivalTime,
-              burstTime: p.burstTime,
-              priority: p.priority,
-              endTime: p.completionTime,
-            }))
-            .sort((a: any, b: any) => a.startValue! - b.startValue!);
+        setAverageMetrics({
+          turnaround: avgTurnaround,
+          waiting: avgWaiting,
+          totalExecutionTime: totalExecTime,
+        });
 
-          setGanttChart(ganttItems);
-        }
+        // Create a processMap for lookup
+        const processMap = Object.fromEntries(
+          processes.map((p: Process) => [p.id, p])
+        );
+
+        // Construct Gantt chart items
+        const ganttItems = executionLog.map((log: any, index: number) => {
+          const p = processMap[log.processId];
+
+          return {
+            id: `${log.processId}-${index}`,
+            key: `${log.processId}`,
+            name: p.name,
+            startValue: log.startTime,
+            endValue: log.endTime,
+            processId: p.processId,
+            processName: p.name,
+            arrivalTime: p.arrivalTime,
+            burstTime: p.burstTime,
+            priority: p.priority,
+            endTime: p.completionTime,
+          };
+        });
+
+        setGanttChart(ganttItems);
       }
-
-      setSelectedAlgorithm("");
-      setSelectedProcesses([]);
     } catch (err) {
+      setError("Failed to run scheduling. Please try again.");
       console.error(err);
-      setError("Failed to run scheduling algorithm. Please try again.");
     }
   };
 
@@ -375,8 +376,10 @@ const Scheduling = () => {
           {ganttChart.length > 0 && (
             <GanttChart
               items={ganttChart}
-              title="Process Scheduling"
+              title="Process Execution Timeline"
               timeFormat={(val) => `${val}ms`}
+              customKeys={["burstTime", "priority"]}
+              theme="dark"
             />
           )}
         </div>
