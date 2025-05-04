@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FaClock, FaExclamationTriangle } from "react-icons/fa";
-import { Process, startScheduling } from "../api/scheduleService";
+import { Process, runScheduling } from "../api/scheduleService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchProcesses } from "../api/processesService";
 import { Algorithm, fetchAlgorithms } from "../api/algorithmsService";
@@ -45,7 +45,7 @@ const Scheduling = () => {
 
   // Run schedule
   const runSchedulingMutation = useMutation({
-    mutationFn: startScheduling,
+    mutationFn: runScheduling,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["processes"] });
     },
@@ -77,7 +77,7 @@ const Scheduling = () => {
     setTimeQuantum(parseInt(e.target.value, 10));
   };
 
-  const startSchedulingEvent = async () => {
+  const runSchedulingEvent = async () => {
     if (selectedProcesses.length === 0) {
       setError("Please select at least one process.");
       return;
@@ -110,71 +110,72 @@ const Scheduling = () => {
 
       const response: any = await runSchedulingMutation.mutateAsync(data);
 
-      // Process results from API
       if (response) {
-        // Use processesJson if available, otherwise fallback to $values
-        const processesData = response.processesJson
+        const processes = response.processesJson
           ? JSON.parse(response.processesJson)
           : response.processes?.$values || [];
 
-        setResults(processesData);
+        const executionLog = response.executionLogJson
+          ? JSON.parse(response.executionLogJson)
+          : [];
 
-        // Calculate average metrics
-        const totalProcesses = processesData.length;
-        if (totalProcesses > 0) {
-          const avgTurnaround =
-            response.averageTurnaroundTime ||
-            processesData.reduce(
-              (sum: number, p: Process) => sum + (p.turnaroundTime || 0),
-              0
-            ) / totalProcesses;
+        setResults(processes);
 
-          const avgWaiting =
-            response.averageWaitingTime ||
-            processesData.reduce(
-              (sum: number, p: Process) => sum + (p.waitingTime || 0),
-              0
-            ) / totalProcesses;
+        // Set averages
+        const totalProcesses = processes.length;
+        const avgTurnaround =
+          response.averageTurnaroundTime ||
+          processes.reduce(
+            (sum: number, p: Process) => sum + (p.turnaroundTime || 0),
+            0
+          ) / totalProcesses;
 
-          const totalExecTime =
-            response.totalExecutionTime ||
-            Math.max(
-              ...processesData.map((p: Process) => p.completionTime || 0)
-            );
+        const avgWaiting =
+          response.averageWaitingTime ||
+          processes.reduce(
+            (sum: number, p: Process) => sum + (p.waitingTime || 0),
+            0
+          ) / totalProcesses;
 
-          setAverageMetrics({
-            turnaround: avgTurnaround,
-            waiting: avgWaiting,
-            totalExecutionTime: totalExecTime,
-          });
+        const totalExecTime =
+          response.totalExecutionTime ||
+          Math.max(...processes.map((p: Process) => p.completionTime || 0));
 
-          // Generate Gantt chart data
-          const ganttItems = processesData
-            .filter((p: Process) => p.completionTime !== undefined)
-            .map((p: Process) => ({
-              id: p.processId.toString(),
-              name: p.name,
-              startValue: p.arrivalTime,
-              endValue: p.completionTime,
-              // Keep original properties for reference if needed
-              processId: p.processId,
-              processName: p.name,
-              arrivalTime: p.arrivalTime,
-              burstTime: p.burstTime,
-              priority: p.priority,
-              endTime: p.completionTime,
-            }))
-            .sort((a: any, b: any) => a.startValue! - b.startValue!);
+        setAverageMetrics({
+          turnaround: avgTurnaround,
+          waiting: avgWaiting,
+          totalExecutionTime: totalExecTime,
+        });
 
-          setGanttChart(ganttItems);
-        }
+        // Create a processMap for lookup
+        const processMap = Object.fromEntries(
+          processes.map((p: Process) => [p.id, p])
+        );
+
+        // Construct Gantt chart items
+        const ganttItems = executionLog.map((log: any, index: number) => {
+          const p = processMap[log.processId];
+
+          return {
+            id: `${log.processId}-${index}`,
+            key: `${log.processId}`,
+            name: p.name,
+            startValue: log.startTime,
+            endValue: log.endTime,
+            processId: p.processId,
+            processName: p.name,
+            arrivalTime: p.arrivalTime,
+            burstTime: p.burstTime,
+            priority: p.priority,
+            endTime: p.completionTime,
+          };
+        });
+
+        setGanttChart(ganttItems);
       }
-
-      setSelectedAlgorithm("");
-      setSelectedProcesses([]);
     } catch (err) {
+      setError("Failed to run scheduling. Please try again.");
       console.error(err);
-      setError("Failed to run scheduling algorithm. Please try again.");
     }
   };
 
@@ -210,8 +211,7 @@ const Scheduling = () => {
               <div className="flex justify-center items-center h-32">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
               </div>
-            ) : fetchedProcesses.filter((p: Process) => !p.isCompleted)
-                .length === 0 ? (
+            ) : fetchedProcesses.length === 0 ? (
               <div className="text-center p-4">
                 <FaExclamationTriangle className="mx-auto text-yellow-500 text-3xl mb-2" />
                 <p className="text-gray-600 dark:text-gray-400">
@@ -237,7 +237,7 @@ const Scheduling = () => {
 
                 <div className="max-h-60 overflow-y-auto">
                   {fetchedProcesses.map((process: Process) => {
-                    if (process.isCompleted) return null;
+                    // if (process.isCompleted) return null;
                     return (
                       <div
                         key={process.id}
@@ -343,7 +343,7 @@ const Scheduling = () => {
             )}
 
             <button
-              onClick={startSchedulingEvent}
+              onClick={runSchedulingEvent}
               disabled={
                 runSchedulingMutation.isPending ||
                 selectedProcesses.length === 0 ||
@@ -375,8 +375,10 @@ const Scheduling = () => {
           {ganttChart.length > 0 && (
             <GanttChart
               items={ganttChart}
-              title="Process Scheduling"
+              title="Process Execution Timeline"
               timeFormat={(val) => `${val}ms`}
+              customKeys={["burstTime", "priority"]}
+              theme="dark"
             />
           )}
         </div>

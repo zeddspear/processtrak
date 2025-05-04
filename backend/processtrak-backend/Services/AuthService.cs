@@ -36,6 +36,26 @@ namespace processtrak_backend.Services
             return true;
         }
 
+        public async Task<User> CreateGuestUser()
+        {
+            var guestId = Guid.NewGuid().ToString().Substring(0, 8);
+            var guestEmail = $"guest_{guestId}@guest.local";
+
+            var guestUser = new User
+            {
+                name = $"Guest_{guestId}",
+                email = guestEmail,
+                password = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()), // Random password
+                phone = "0000000000", // Optional placeholder
+                isGuest = true, // Add this field in your User model if needed
+            };
+
+            _context.Users.Add(guestUser);
+            await _context.SaveChangesAsync();
+
+            return guestUser;
+        }
+
         public async Task<User?> AuthenticateUser(string email, string password)
         {
             var user = await _context
@@ -53,16 +73,19 @@ namespace processtrak_backend.Services
 
         public async Task<bool> SaveSession(User user, string token, DateTime expiryTime)
         {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user), "User cannot be null in SaveSession");
+
             var session = new UserSession
             {
-                userId = user.id,
+                userId = user!.id,
                 token = token,
                 expiryTime = expiryTime,
                 user = user,
             };
 
-            user.UserSessions!.Add(session); // Add to the user's session collection
-            _context.UserSessions.Add(session); // Save the session to the database
+            // user.UserSessions!.Add(session); // Add to the user's session collection
+            _context!.UserSessions.Add(session); // Save the session to the database
             await _context.SaveChangesAsync();
             return true;
         }

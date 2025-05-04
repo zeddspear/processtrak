@@ -16,12 +16,22 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  isGuest: boolean;
 }
 
 export const loginUser = async (data: LoginData) => {
   const response = await api.post<{ token: string; user: User }>(
     "/auth/login",
     data
+  );
+  localStorage.setItem("token", response.data.token); // Store token
+
+  return await fetchCurrentUser();
+};
+
+export const loginAsGuestUser = async () => {
+  const response = await api.post<{ token: string; user: User }>(
+    "/auth/guest-login"
   );
   localStorage.setItem("token", response.data.token); // Store token
 

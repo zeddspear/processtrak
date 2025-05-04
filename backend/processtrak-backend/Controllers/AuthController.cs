@@ -53,7 +53,7 @@ namespace processtrak_backend.Controllers
                 return Unauthorized("Invalid credentials.");
             }
 
-            var expiryTime = DateTime.UtcNow.AddHours(2); // Set token expiration time
+            var expiryTime = DateTime.UtcNow.AddDays(30); // Set token expiration time
 
             // Generate JWT token and save session
             var token = _authService.GenerateJwtToken(user, expiryTime);
@@ -68,6 +68,30 @@ namespace processtrak_backend.Controllers
                 new
                 {
                     message = "Login successful.",
+                    token,
+                    expiryTime,
+                }
+            );
+        }
+
+        [HttpPost("guest-login")]
+        public async Task<IActionResult> GuestLogin()
+        {
+            var guestUser = await _authService.CreateGuestUser();
+
+            var expiryTime = DateTime.UtcNow.AddHours(2); // Or shorter for guest
+            var token = _authService.GenerateJwtToken(guestUser, expiryTime);
+            var sessionSaved = await _authService.SaveSession(guestUser, token, expiryTime);
+
+            if (!sessionSaved)
+            {
+                return BadRequest("Failed to save session.");
+            }
+
+            return Ok(
+                new
+                {
+                    message = "Guest login successful.",
                     token,
                     expiryTime,
                 }

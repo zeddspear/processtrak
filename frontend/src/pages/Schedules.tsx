@@ -5,11 +5,14 @@ import {
   deleteSchedule,
   Schedule,
 } from "../api/scheduleService";
-import { FaTrash } from "react-icons/fa";
+import { FaEdit, FaTrash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import EditScheduleModal from "../components/EditScheduleModal";
 
 const Schedules = () => {
   const [error, setError] = useState<string | null>(null);
+  const [editSchedule, setEditSchedule] = useState<Schedule | null>(null);
+
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -114,14 +117,14 @@ const Schedules = () => {
                               key={idx}
                               className="bg-blue-100 text-blue-800 text-xs font-semibold mr-1 px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300"
                             >
-                              {algo.name}
+                              {algo.displayName}
                             </span>
                           ))}
                         {algorithms.length > 3 && (
                           <span
                             className="text-xs text-gray-500 dark:text-gray-400"
                             title={algorithms
-                              ?.map((a: any) => a.name)
+                              ?.map((a: any) => a.displayName)
                               .join(", ")}
                           >
                             +{algorithms.length - 3} more
@@ -143,6 +146,16 @@ const Schedules = () => {
                       onClick={(e) => e.stopPropagation()} // Prevent row click from firing when clicking in actions cell
                     >
                       <button
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 mr-3 hover:cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditSchedule(schedule);
+                        }}
+                      >
+                        <FaEdit />
+                      </button>
+
+                      <button
                         className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:cursor-pointer"
                         onClick={(e) => handleDelete(schedule.id, e)}
                       >
@@ -155,6 +168,12 @@ const Schedules = () => {
             </tbody>
           </table>
         </div>
+      )}
+      {editSchedule && (
+        <EditScheduleModal
+          schedule={editSchedule}
+          onClose={() => setEditSchedule(null)}
+        />
       )}
     </div>
   );

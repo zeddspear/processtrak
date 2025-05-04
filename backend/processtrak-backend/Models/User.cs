@@ -10,6 +10,8 @@ namespace processtrak_backend.Models
 
         public required string phone { get; set; }
 
+        public bool isGuest { get; set; } = false;
+
         public ICollection<UserSession>? UserSessions { get; set; }
         public ICollection<Process>? Processes { get; set; }
     }
