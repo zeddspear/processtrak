@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FaClock, FaExclamationTriangle } from "react-icons/fa";
-import { Process, startScheduling } from "../api/scheduleService";
+import { Process, runScheduling } from "../api/scheduleService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchProcesses } from "../api/processesService";
 import { Algorithm, fetchAlgorithms } from "../api/algorithmsService";
@@ -45,7 +45,7 @@ const Scheduling = () => {
 
   // Run schedule
   const runSchedulingMutation = useMutation({
-    mutationFn: startScheduling,
+    mutationFn: runScheduling,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["processes"] });
     },
@@ -77,7 +77,7 @@ const Scheduling = () => {
     setTimeQuantum(parseInt(e.target.value, 10));
   };
 
-  const startSchedulingEvent = async () => {
+  const runSchedulingEvent = async () => {
     if (selectedProcesses.length === 0) {
       setError("Please select at least one process.");
       return;
@@ -211,8 +211,7 @@ const Scheduling = () => {
               <div className="flex justify-center items-center h-32">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
               </div>
-            ) : fetchedProcesses.filter((p: Process) => !p.isCompleted)
-                .length === 0 ? (
+            ) : fetchedProcesses.length === 0 ? (
               <div className="text-center p-4">
                 <FaExclamationTriangle className="mx-auto text-yellow-500 text-3xl mb-2" />
                 <p className="text-gray-600 dark:text-gray-400">
@@ -238,7 +237,7 @@ const Scheduling = () => {
 
                 <div className="max-h-60 overflow-y-auto">
                   {fetchedProcesses.map((process: Process) => {
-                    if (process.isCompleted) return null;
+                    // if (process.isCompleted) return null;
                     return (
                       <div
                         key={process.id}
@@ -344,7 +343,7 @@ const Scheduling = () => {
             )}
 
             <button
-              onClick={startSchedulingEvent}
+              onClick={runSchedulingEvent}
               disabled={
                 runSchedulingMutation.isPending ||
                 selectedProcesses.length === 0 ||

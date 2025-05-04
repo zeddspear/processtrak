@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using processtrak_backend.Api.data;
 using processtrak_backend.Dto;
@@ -25,13 +26,29 @@ namespace processtrak_backend.Services
         {
             try
             {
+                var algorithms = await _context
+                    .Algorithms.Where(a => algorithmIds.Contains(a.id))
+                    .ToListAsync();
+
+                // Always making sure the process being used if they are already completed make isCompleted false again so we could use them properly
+                // Reset process states in the database before executing the schedule
+                await _context
+                    .Processes.Where(p => processIds.Contains(p.id))
+                    .ExecuteUpdateAsync(p =>
+                        p.SetProperty(x => x.isCompleted, false)
+                            .SetProperty(x => x.completionTime, (int?)null)
+                            .SetProperty(x => x.remainingTime, (int?)null)
+                            .SetProperty(x => x.turnaroundTime, 0)
+                            .SetProperty(x => x.waitingTime, 0)
+                            .SetProperty(x => x.responseTime, (int?)null)
+                            .SetProperty(x => x.startTime, (int?)null)
+                            .SetProperty(x => x.State, enums.ProcessState.Ready)
+                    );
+
+                // Refresh process data from database to ensure we have the updated state
                 var processes = await _context
                     .Processes.Where(p => processIds.Contains(p.id) && p.userId == userId)
                     .OrderBy(p => p.arrivalTime)
-                    .ToListAsync();
-
-                var algorithms = await _context
-                    .Algorithms.Where(a => algorithmIds.Contains(a.id))
                     .ToListAsync();
 
                 var scheduleRun = new Schedule
@@ -65,6 +82,31 @@ namespace processtrak_backend.Services
                 await _context.Schedules.AddAsync(scheduleRun);
                 await _context.SaveChangesAsync();
 
+                var user = await _context
+                    .Users.Where(u => u.id == userId) // Your condition to find the user
+                    .Select(u => new
+                    {
+                        u.id,
+                        u.name,
+                        u.email,
+                        u.phone,
+                        u.isGuest,
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    throw new Exception("User not found");
+                }
+
+                //if user is guest delete its processes
+                if (user.isGuest)
+                {
+                    await _context
+                        .Processes.Where(p => processIds.Contains(p.id))
+                        .ExecuteDeleteAsync();
+                }
+
                 return scheduleRun;
             }
             catch (JsonException jsonEx)
@@ -80,6 +122,86 @@ namespace processtrak_backend.Services
             {
                 // Handle other types of exceptions
                 throw new Exception("An unexpected error occurred: " + ex.Message, ex);
+            }
+        }
+
+        public async Task<Schedule> ReRunScheduleAsync(
+            Guid scheduleId,
+            Guid userId,
+            List<Guid> processIds,
+            List<Guid> algorithmIds,
+            int timeQuantum
+        )
+        {
+            try
+            {
+                var schedule = await _context
+                    .Schedules.Include(s => s.processes)
+                    .Include(s => s.algorithms)
+                    .FirstOrDefaultAsync(s => s.id == scheduleId && s.userId == userId);
+
+                if (schedule == null)
+                {
+                    throw new Exception("Schedule not found for the given user.");
+                }
+
+                // Get updated algorithms
+                var algorithms = await _context
+                    .Algorithms.Where(a => algorithmIds.Contains(a.id))
+                    .ToListAsync();
+
+                // Reset selected processes
+                await _context
+                    .Processes.Where(p => processIds.Contains(p.id))
+                    .ExecuteUpdateAsync(p =>
+                        p.SetProperty(x => x.isCompleted, false)
+                            .SetProperty(x => x.completionTime, (int?)null)
+                            .SetProperty(x => x.remainingTime, (int?)null)
+                            .SetProperty(x => x.turnaroundTime, 0)
+                            .SetProperty(x => x.waitingTime, 0)
+                            .SetProperty(x => x.responseTime, (int?)null)
+                            .SetProperty(x => x.startTime, (int?)null)
+                            .SetProperty(x => x.State, enums.ProcessState.Ready)
+                    );
+
+                var processes = await _context
+                    .Processes.Where(p => processIds.Contains(p.id) && p.userId == userId)
+                    .OrderBy(p => p.arrivalTime)
+                    .ToListAsync();
+
+                var executionLog = new List<ExecutionLogEntry>();
+
+                foreach (var algorithm in algorithms)
+                {
+                    ExecuteAlgorithm(processes, algorithm.name, timeQuantum, executionLog);
+                }
+
+                // Update schedule data
+                schedule.startTime = DateTime.UtcNow;
+                schedule.endTime = DateTime.UtcNow;
+                schedule.processes = processes;
+                schedule.algorithms = algorithms;
+
+                var options = new JsonSerializerOptions
+                {
+                    ReferenceHandler = ReferenceHandler.IgnoreCycles,
+                    WriteIndented = true,
+                };
+
+                schedule.ProcessesJson = JsonSerializer.Serialize(processes, options);
+                schedule.AlgorithmsJson = JsonSerializer.Serialize(algorithms, options);
+                schedule.ExecutionLogJson = JsonSerializer.Serialize(executionLog, options);
+                schedule.totalExecutionTime = processes.Sum(p => p.completionTime ?? 0);
+                schedule.averageWaitingTime = (int)processes.Average(p => p.waitingTime ?? 0);
+                schedule.averageTurnaroundTime = (int)processes.Average(p => p.turnaroundTime ?? 0);
+
+                await _context.SaveChangesAsync();
+
+                return schedule;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error re-running schedule: " + ex.Message, ex);
             }
         }
 
@@ -197,6 +319,10 @@ namespace processtrak_backend.Services
                     // Round Robin logic
                     StaticAlgorithmService.RunRoundRobin(processes, timeQuantum, executionLog);
                     break;
+                default:
+                    throw new ArgumentException(
+                        $"Algorithm '{algorithmName}' not found in the system."
+                    );
             }
         }
     }

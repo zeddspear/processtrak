@@ -20,12 +20,28 @@ export interface GanttChartItem {
   endTime: number;
 }
 
-export const startScheduling = async (data: {
+export const runScheduling = async (data: {
   processIds: string[];
   algorithmIds: string[];
   timeQuantum: number;
 }) => {
   const response = await api.post("/processes/schedule/run", data);
+
+  return response.data;
+};
+
+export const reRunScheduling = async (
+  scheduleId: string,
+  data: {
+    processIds: string[];
+    algorithmIds: string[];
+    timeQuantum: number;
+  }
+) => {
+  const response = await api.put(
+    `/processes/schedule/re-run/${scheduleId}`,
+    data
+  );
 
   return response.data;
 };

@@ -30,12 +30,13 @@ public class MeController : ControllerBase
                 u.name,
                 u.email,
                 u.phone,
+                u.isGuest,
             })
             .FirstOrDefaultAsync();
 
         if (user == null)
         {
-            return NotFound("User not found.");
+            return NotFound(new { Message = "User not found" });
         }
 
         // Return the user data if found

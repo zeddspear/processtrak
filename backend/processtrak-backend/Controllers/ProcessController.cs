@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using processtrak_backend.Api.data;
 using processtrak_backend.Dto;
 using processtrak_backend.interfaces;
 
@@ -9,6 +11,7 @@ using processtrak_backend.interfaces;
 [Authorize]
 public class ProcessesController : ControllerBase
 {
+    private readonly AppDbContext _context;
     private readonly IProcessService _processService;
     private readonly ISchedulingService _schedulingService;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -16,12 +19,14 @@ public class ProcessesController : ControllerBase
     public ProcessesController(
         IProcessService processService,
         IHttpContextAccessor httpContextAccessor,
-        ISchedulingService schedulingService
+        ISchedulingService schedulingService,
+        AppDbContext context
     )
     {
         _processService = processService;
         _httpContextAccessor = httpContextAccessor;
         _schedulingService = schedulingService;
+        _context = context;
     }
 
     // Helper to get the current user ID
@@ -97,7 +102,24 @@ public class ProcessesController : ControllerBase
     public async Task<IActionResult> RunSchedule([FromBody] RunScheduleDTO dto)
     {
         var userId = GetUserId();
+
         var result = await _schedulingService.RunScheduleAsync(
+            userId,
+            dto.ProcessIds,
+            dto.AlgorithmIds,
+            dto.TimeQuantum.GetValueOrDefault()
+        );
+
+        return Ok(result);
+    }
+
+    [HttpPut("schedule/re-run/{scheduleId}")]
+    public async Task<IActionResult> ReRunSchedule(Guid scheduleId, [FromBody] RunScheduleDTO dto)
+    {
+        var userId = GetUserId();
+
+        var result = await _schedulingService.ReRunScheduleAsync(
+            scheduleId,
             userId,
             dto.ProcessIds,
             dto.AlgorithmIds,
@@ -111,6 +133,32 @@ public class ProcessesController : ControllerBase
     public async Task<IActionResult> GetAllSchedulesByUserId()
     {
         var userId = GetUserId();
+
+        var user = await _context
+            .Users.Where(u => u.id == userId) // Your condition to find the user
+            .Select(u => new
+            {
+                u.id,
+                u.name,
+                u.email,
+                u.phone,
+                u.isGuest,
+            })
+            .FirstOrDefaultAsync();
+
+        if (user == null)
+        {
+            return NotFound(new { Message = "User not found" });
+        }
+
+        if (user!.isGuest)
+        {
+            return StatusCode(
+                403,
+                new { Message = "You are a guest user unauthorize to this endpoint." }
+            );
+        }
+
         var runs = await _schedulingService.GetAllSchedulesByUserIdAsync(userId);
 
         if (runs == null)

@@ -13,7 +13,7 @@ const validationSchema = Yup.object({
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useApp();
+  const { login, loginAsGuest } = useApp();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-amber-50 dark:bg-gray-900">
@@ -42,45 +42,64 @@ const Login = () => {
           }}
         >
           {({ errors, touched, isSubmitting }) => (
-            <Form className="space-y-4 mt-6">
-              <Field
-                name="email"
-                type="email"
-                className="input-field"
-                placeholder="Email Address"
-              />
-              {errors.email && touched.email && (
-                <p className="text-sm text-red-500">{errors.email}</p>
-              )}
+            <>
+              <Form className="space-y-4 mt-6">
+                <Field
+                  name="email"
+                  type="email"
+                  className="input-field"
+                  placeholder="Email Address"
+                />
+                {errors.email && touched.email && (
+                  <p className="text-sm text-red-500">{errors.email}</p>
+                )}
 
-              <Field
-                name="password"
-                type="password"
-                className="input-field"
-                placeholder="Password"
-              />
-              {errors.password && touched.password && (
-                <p className="text-sm text-red-500">{errors.password}</p>
-              )}
+                <Field
+                  name="password"
+                  type="password"
+                  className="input-field"
+                  placeholder="Password"
+                />
+                {errors.password && touched.password && (
+                  <p className="text-sm text-red-500">{errors.password}</p>
+                )}
 
-              {/* Forgot Password Link */}
-              <div className="text-right">
-                <span
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-                  onClick={() => navigate("/forgot-password")}
+                {/* Forgot Password Link */}
+                <div className="text-right">
+                  <span
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    onClick={() => navigate("/forgot-password")}
+                  >
+                    Forgot Password?
+                  </span>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn-primary"
                 >
-                  Forgot Password?
-                </span>
+                  {isSubmitting ? "Signing in..." : "Sign In"}
+                </button>
+              </Form>
+              {/* Guest Sign In Button */}
+              <div className="mt-4">
+                <button
+                  type="button"
+                  className="btn-secondary w-full"
+                  onClick={async () => {
+                    try {
+                      await loginAsGuest();
+                      navigate("/");
+                    } catch (error) {
+                      console.error("Guest login failed", error);
+                    }
+                  }}
+                >
+                  Sign In as Guest
+                </button>
               </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="btn-primary"
-              >
-                {isSubmitting ? "Signing in..." : "Sign In"}
-              </button>
-            </Form>
+            </>
           )}
         </Formik>
 

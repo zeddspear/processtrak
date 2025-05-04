@@ -8,6 +8,7 @@ import {
   User,
   LoginData,
   RegisterData,
+  loginAsGuestUser,
 } from "../api/authService";
 
 interface AppContextType {
@@ -15,6 +16,7 @@ interface AppContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (data: LoginData) => Promise<User>;
+  loginAsGuest: () => Promise<User>;
   register: (data: RegisterData) => Promise<User>;
   logout: () => void;
 }
@@ -39,6 +41,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     },
   });
 
+  const loginAsGuestMutation = useMutation({
+    mutationFn: loginAsGuestUser,
+    onSuccess: (user) => {
+      queryClient.setQueryData(["currentUser"], user);
+    },
+  });
+
   // Register Mutation
   const registerMutation = useMutation({
     mutationFn: registerUser,
@@ -57,6 +66,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: !!user,
         isLoading,
         login: async (data) => loginMutation.mutateAsync(data),
+        loginAsGuest: async () => loginAsGuestMutation.mutateAsync(),
         register: async (data) => registerMutation.mutateAsync(data),
         logout,
       }}
