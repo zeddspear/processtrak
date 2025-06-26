@@ -42,6 +42,7 @@ const GanttChart: React.FC<GanttChartProps> = ({
   barBorderRadius = 4,
   barHoverEffect = true,
 }) => {
+  console.log(theme);
   // Calculate min and max values for scaling
   const minValue = Math.min(...items.map((item) => item.startValue));
   const maxValue = Math.max(...items.map((item) => item.endValue));

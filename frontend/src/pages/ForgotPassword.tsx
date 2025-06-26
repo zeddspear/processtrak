@@ -42,7 +42,7 @@ const ForgotPassword = () => {
           validationSchema={validationSchema}
           onSubmit={(values) => mutation.mutate(values.email)}
         >
-          {({ isSubmitting }) => (
+          {({}) => (
             <Form className="space-y-4 mt-6">
               <Field
                 name="email"

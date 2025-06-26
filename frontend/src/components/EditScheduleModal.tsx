@@ -7,7 +7,6 @@ import {
   Process,
   Schedule,
   reRunScheduling,
-  runScheduling,
 } from "../api/scheduleService";
 import { FaClock, FaExclamationTriangle } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";

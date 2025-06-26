@@ -92,6 +92,7 @@ const Processes = () => {
     { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void }
   ) => {
     let response = null;
+    console.log(response);
     try {
       if (isEditing) {
         response = await updateProcessMutation.mutateAsync({
